@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kéo Búa Bao - Multiplayer Rooms</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>🪨 📄 ✂️ Kéo Búa Bao - Multiplayer</h1>
+
+      <!-- Màn hình chính -->
+      <div id="main-screen" class="screen active">
+        <div class="player-info">
+          <div class="name-input">
+            <label for="player-name">Tên của bạn:</label>
+            <input
+              type="text"
+              id="player-name"
+              placeholder="Nhập tên..."
+              maxlength="20"
+            />
+            <button onclick="setPlayerName()">Cập nhật</button>
+          </div>
+          <div class="current-player">
+            <span>Người chơi: <span id="player-id">Đang kết nối...</span></span>
+          </div>
+        </div>
+
+        <div class="main-actions">
+          <button class="action-btn primary" onclick="showCreateRoom()">
+            🏠 Tạo phòng mới
+          </button>
+          <button class="action-btn secondary" onclick="refreshRooms()">
+            🔄 Làm mới danh sách
+          </button>
+        </div>
+
+        <div class="rooms-section">
+          <h2>📋 Danh sách phòng</h2>
+          <div id="rooms-list" class="rooms-grid">
+            <div class="loading">Đang tải danh sách phòng...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Màn hình tạo phòng -->
+      <div id="create-room-screen" class="screen">
+        <h2>🏠 Tạo phòng mới</h2>
+        <div class="form-group">
+          <label for="room-name">Tên phòng:</label>
+          <input
+            type="text"
+            id="room-name"
+            placeholder="Nhập tên phòng..."
+            maxlength="30"
+          />
+        </div>
+        <div class="form-group">
+          <label for="max-players">Số người chơi:</label>
+          <select id="max-players" disabled>
+            <option value="2" selected>2 người</option>
+          </select>
+          <small style="color: #666">Chỉ hỗ trợ 2 người chơi</small>
+        </div>
+        <div class="form-actions">
+          <button class="action-btn primary" onclick="createRoom()">
+            Tạo phòng
+          </button>
+          <button class="action-btn secondary" onclick="showMainScreen()">
+            Hủy
+          </button>
+        </div>
+      </div>
+
+      <!-- Màn hình phòng chơi -->
+      <div id="game-room-screen" class="screen">
+        <div class="room-header">
+          <h2 id="room-name">Phòng chơi</h2>
+          <button class="leave-btn" onclick="leaveRoom()">🚪 Rời phòng</button>
+        </div>
+
+        <div class="room-info">
+          <div class="players-list">
+            <h3>👥 Người chơi trong phòng</h3>
+            <div id="players-list"></div>
+          </div>
+          <div class="scoreboard">
+            <h3>🏆 Bảng điểm</h3>
+            <div id="scoreboard"></div>
+          </div>
+        </div>
+
+        <div class="game-section">
+          <div class="game-status">
+            <p id="game-status">Chờ người chơi tham gia...</p>
+            <p id="game-result">Chọn lựa của bạn:</p>
+          </div>
+
+          <div class="choices">
+            <button
+              class="choice-btn"
+              onclick="sendChoice('rock')"
+              id="rock-btn"
+            >
+              <div class="choice-icon">🪨</div>
+              <div class="choice-text">Búa</div>
+            </button>
+            <button
+              class="choice-btn"
+              onclick="sendChoice('paper')"
+              id="paper-btn"
+            >
+              <div class="choice-icon">📄</div>
+              <div class="choice-text">Bao</div>
+            </button>
+            <button
+              class="choice-btn"
+              onclick="sendChoice('scissors')"
+              id="scissors-btn"
+            >
+              <div class="choice-icon">✂️</div>
+              <div class="choice-text">Kéo</div>
+            </button>
+          </div>
+
+          <div class="ready-section">
+            <button id="ready-btn" class="ready-btn" onclick="toggleReady()">
+              ✅ Sẵn sàng
+            </button>
+          </div>
+
+          <div class="game-history">
+            <h3>📜 Lịch sử trận đấu</h3>
+            <div id="history-list"></div>
+          </div>
+
+          <button
+            id="new-game-btn"
+            class="new-game-btn"
+            onclick="requestNewGame()"
+            style="display: none"
+          >
+            🔄 Chơi lại
+          </button>
+        </div>
+      </div>
+
+      <!-- Thông báo -->
+      <div id="notification" class="notification"></div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
