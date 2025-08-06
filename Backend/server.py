@@ -148,8 +148,24 @@ class GameServer:
             else:  # draw
                 room.scores[player]['draws'] += 1
 
-    # ----- KHÔNG có hàm handle_chat ở bản này -----
+    async def handle_chat(self, websocket, data):
+        room_id = self.get_player_room(websocket)
+        if not room_id:
+         return
+        player_name = self.clients[websocket]['name']
+        message_text = data.get('message', '')
+        if not message_text.strip():
+         return  # Không gửi tin nhắn rỗng
+        # In ra log server
+        print(f"[CHAT] Phòng {room_id} - {player_name}: {message_text}")
+        # Gửi lại cho tất cả người chơi trong phòng
+        await self.broadcast_to_room(room_id, {
+        'type': 'chat',
+        'player_name': player_name,
+        'message': message_text
+    })
 
+    
     async def handle_client(self, websocket: websockets.WebSocketServerProtocol, path: str):
         """Xử lý kết nối của client"""
         player_id = self.get_next_player_id()
@@ -195,6 +211,9 @@ class GameServer:
                 await self.handle_new_game_request(websocket)
             elif message_type == 'set_name':
                 await self.handle_set_name(websocket, data['name'])
+            elif message_type == 'chat':
+                await self.handle_chat(websocket, data)
+
             # KHÔNG xử lý chat ở bản nền tảng!
             else:
                 print(f"Tin nhắn không xác định: {message_type}")

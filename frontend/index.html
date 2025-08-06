@@ -98,7 +98,7 @@
             <p id="game-status">Chờ người chơi tham gia...</p>
             <p id="game-result">Chọn lựa của bạn:</p>
           </div>
-
+        
           <div class="choices">
             <button
               class="choice-btn"
@@ -145,6 +145,21 @@
           >
             🔄 Chơi lại
           </button>
+        </div>
+         <!-- Chat section -->
+        <div class="chat-section">
+          <h3>💬 Chat phòng</h3>
+          <div id="chat-messages" class="chat-messages"></div>
+          <div class="chat-input-row">
+            <input
+              type="text"
+              id="chat-input"
+              placeholder="Nhắn gì đó..."
+              maxlength="100"
+              autocomplete="off"
+            />
+            <button class="chat-send-btn" onclick="sendChat()">Gửi</button>
+          </div>
         </div>
       </div>
 

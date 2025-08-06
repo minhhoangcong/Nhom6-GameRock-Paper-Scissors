@@ -115,6 +115,10 @@ function handleServerMessage(data) {
                 refreshRooms();
             }
             break;
+        case "chat":
+  addChatMessage(data.player_name, data.message);
+  break;
+    
     }
 }
 
@@ -704,28 +708,33 @@ function showNotification(message, type = 'info') {
 }
 
 // Khởi tạo khi trang load
-document.addEventListener('DOMContentLoaded', () => {
-    initWebSocket();
-    updateHistoryDisplay();
-    
-    // Tự động focus vào input tên
-    document.getElementById('player-name').focus();
-    
-    // Enter để đặt tên
-    document.getElementById('player-name').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            setPlayerName();
-        }
-    });
-    
-    // Enter để tạo phòng
-    document.getElementById('room-name').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            createRoom();
-        }
-    });
+document.addEventListener("DOMContentLoaded", () => {
+  initWebSocket();
+  updateHistoryDisplay();
+
+  // Tự động focus vào input tên
+  document.getElementById("player-name").focus();
+  //enter chat
+  document.getElementById("chat-input").addEventListener("keypress", (e) => {
+    if (e.key === "Enter") sendChat();
+  });
+
+  // Enter để đặt tên
+  document.getElementById("player-name").addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      setPlayerName();
+    }
+  });
+
+  // Enter để tạo phòng
+  document.getElementById("room-name").addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      createRoom();
+    }
+  });
 });
-    // Bắt đầu chơi với máy (bot)
+
+// Bắt đầu chơi với máy (bot)
 function startVsBot() {
     currentRoom = {
         room_name: "Bạn vs Máy",
@@ -753,4 +762,36 @@ function getResultAgainstBot(player, bot) {
         return 'win';
     }
     return 'lose';
+}
+//hàm gửi chat
+function sendChat() {
+  const input = document.getElementById("chat-input");
+  const text = input.value.trim();
+  if (!text) return;
+  ws.send(
+    JSON.stringify({
+      type: "chat",
+      message: text,
+    })
+  );
+  input.value = "";
+}
+
+function addChatMessage(sender, message) {
+  const chatBox = document.getElementById("chat-messages");
+  if (!chatBox) return;
+
+  // So sánh sender với playerName toàn cục để xác định có phải tin nhắn của mình không
+  const isMe = sender === playerName;
+  const nameDisplay = isMe ? "Bạn" : sender;
+
+  let cls = "chat-message";
+  if (isMe) cls += " me";
+  if (sender === "SYSTEM") cls += " system";
+
+  const div = document.createElement("div");
+  div.className = cls;
+  div.innerHTML = `<b>${nameDisplay}:</b> ${message}`;
+  chatBox.appendChild(div);
+  chatBox.scrollTop = chatBox.scrollHeight;
 }
