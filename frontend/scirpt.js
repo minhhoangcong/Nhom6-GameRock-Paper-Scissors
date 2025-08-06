@@ -389,25 +389,76 @@ function handleGameResult(data) {
 }
 
 // Gửi lựa chọn
+sendChoice()   
 function sendChoice(choice) {
-    if (isWaitingForOpponent) {
-        showNotification("Bạn đã chọn rồi, đang chờ người khác...", "info");
-        return;
-    }
-    
+  // Nếu đang chơi với Bot
+  if (currentRoom && currentRoom.room_name === "Bạn vs Máy") {
     currentChoice = choice;
-    isWaitingForOpponent = true;
-    
-    // Hiển thị lựa chọn đã chọn
     selectChoice(choice);
-    
-    // Gửi lựa chọn đến server
-    ws.send(JSON.stringify({
-        type: 'choice',
-        choice: choice
-    }));
-    
-    updateGameStatus("Đã chọn! Đang chờ người khác...");
+
+    // Bot chọn random
+    const botChoices = ["rock", "paper", "scissors"];
+    const botChoice = botChoices[Math.floor(Math.random() * 3)];
+
+    // So sánh kết quả
+    const result = getResultAgainstBot(choice, botChoice);
+    const results = {
+      [playerName]: result,
+      Bot: result === "win" ? "lose" : result === "lose" ? "win" : "draw",
+    };
+
+    const choices = {
+      [playerName]: choice,
+      Bot: botChoice,
+    };
+
+    // Thêm vào lịch sử
+    addToHistory(choices, results);
+
+    // Cập nhật điểm số
+    if (result === "win") {
+      currentRoom.scores[playerName].wins += 1;
+      currentRoom.scores["Bot"].losses += 1;
+    } else if (result === "lose") {
+      currentRoom.scores[playerName].losses += 1;
+      currentRoom.scores["Bot"].wins += 1;
+    } else {
+      currentRoom.scores[playerName].draws += 1;
+      currentRoom.scores["Bot"].draws += 1;
+    }
+
+    // 🎯 Cập nhật bảng điểm ngay lập tức
+    updateScoreboard(currentRoom);
+
+    // Hiển thị kết quả
+    updateGameResult(
+      `Bạn chọn ${getChoiceText(choice)} - Bot chọn ${getChoiceText(botChoice)}`
+    );
+    showNewGameButton();
+    disableChoices();
+    updateGameStatus("Kết thúc trận. Bấm 'Chơi lại'");
+    return;
+  }
+
+  // Nếu chơi với người thật (giữ nguyên logic cũ)
+  if (isWaitingForOpponent) {
+    showNotification("Bạn đã chọn rồi, đang chờ người khác...", "info");
+    return;
+  }
+
+  currentChoice = choice;
+  isWaitingForOpponent = true;
+
+  selectChoice(choice);
+
+  ws.send(
+    JSON.stringify({
+      type: "choice",
+      choice: choice,
+    })
+  );
+
+  updateGameStatus("Đã chọn! Đang chờ người khác...");
 }
 
 // Cập nhật bảng điểm
@@ -674,3 +725,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+    // Bắt đầu chơi với máy (bot)
+function startVsBot() {
+    currentRoom = {
+        room_name: "Bạn vs Máy",
+        players: [
+            { name: playerName || `Người chơi ${playerId}`, ready: true, player_id: playerId },
+            { name: "Bot", ready: true, player_id: -1 }
+        ],
+        game_state: 'playing',
+        scores: {
+            [playerName]: { wins: 0, losses: 0, draws: 0 },
+            "Bot": { wins: 0, losses: 0, draws: 0 }
+        }
+    };
+
+    showGameRoom();
+    enableChoices();
+    updateGameStatus("Chọn Kéo/Búa/Bao để đấu với máy.");
+}
+// Xử lý kết quả khi chơi với bot
+function getResultAgainstBot(player, bot) {
+    if (player === bot) return 'draw';
+    if ((player === 'rock' && bot === 'scissors') ||
+        (player === 'paper' && bot === 'rock') ||
+        (player === 'scissors' && bot === 'paper')) {
+        return 'win';
+    }
+    return 'lose';
+}
