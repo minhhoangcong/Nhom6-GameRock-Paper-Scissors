@@ -147,24 +147,6 @@ class GameServer:
                 room.scores[player]['losses'] += 1
             else:  # draw
                 room.scores[player]['draws'] += 1
-
-    async def handle_chat(self, websocket, data):
-        room_id = self.get_player_room(websocket)
-        if not room_id:
-         return
-        player_name = self.clients[websocket]['name']
-        message_text = data.get('message', '')
-        if not message_text.strip():
-         return  # Không gửi tin nhắn rỗng
-        # In ra log server
-        print(f"[CHAT] Phòng {room_id} - {player_name}: {message_text}")
-        # Gửi lại cho tất cả người chơi trong phòng
-        await self.broadcast_to_room(room_id, {
-        'type': 'chat',
-        'player_name': player_name,
-        'message': message_text
-    })
-
     
     async def handle_client(self, websocket: websockets.WebSocketServerProtocol, path: str):
         """Xử lý kết nối của client"""
@@ -211,10 +193,6 @@ class GameServer:
                 await self.handle_new_game_request(websocket)
             elif message_type == 'set_name':
                 await self.handle_set_name(websocket, data['name'])
-            elif message_type == 'chat':
-                await self.handle_chat(websocket, data)
-
-            # KHÔNG xử lý chat ở bản nền tảng!
             else:
                 print(f"Tin nhắn không xác định: {message_type}")
                 
@@ -224,12 +202,15 @@ class GameServer:
             print(f"Lỗi xử lý tin nhắn: {e}")
     
     async def handle_get_rooms(self, websocket: websockets.WebSocketServerProtocol):
+        """Gửi danh sách phòng"""
         await websocket.send(json.dumps({
             'type': 'rooms_list',
             'rooms': self.get_rooms_list()
         }))
     
     async def handle_create_room(self, websocket: websockets.WebSocketServerProtocol, data: dict):
+        """Tạo phòng mới"""
+        # Kiểm tra người chơi đã ở trong phòng khác chưa
         current_room_id = self.get_player_room(websocket)
         if current_room_id:
             await websocket.send(json.dumps({
@@ -239,19 +220,29 @@ class GameServer:
             return
         
         room_name = data.get('room_name', f'Phòng {len(self.rooms) + 1}')
+        
         room_id = self.create_room(room_name, 2)  # Luôn tạo phòng 2 người
         room = self.get_room(room_id)
+        
+        # Thêm người tạo vào phòng
         player_name = self.clients[websocket]['name']
         if room.add_player(websocket, player_name):
             self.clients[websocket]['room_id'] = room_id
+            
+            # Thông báo cho tất cả client về phòng mới
             await self.broadcast_rooms_update()
+            
+            # Gửi thông tin phòng cho người tạo
             room_info = self.get_room_info_with_player_ids(room)
+            
             await websocket.send(json.dumps({
                 'type': 'room_created',
                 'room': room_info
             }))
+            
             print(f"Tạo phòng {room_id} bởi {player_name}")
         else:
+            # Xóa phòng nếu không thể thêm người chơi
             self.remove_room(room_id)
             await websocket.send(json.dumps({
                 'type': 'error',
@@ -259,8 +250,11 @@ class GameServer:
             }))
     
     async def handle_join_room(self, websocket: websockets.WebSocketServerProtocol, data: dict):
+        """Tham gia phòng"""
         room_id = data.get('room_id')
         room = self.get_room(room_id)
+        
+        # Kiểm tra người chơi đã ở trong phòng khác chưa
         current_room_id = self.get_player_room(websocket)
         if current_room_id:
             await websocket.send(json.dumps({
@@ -268,28 +262,38 @@ class GameServer:
                 'message': 'Bạn đã ở trong phòng khác. Hãy rời phòng hiện tại trước.'
             }))
             return
+        
         if not room:
             await websocket.send(json.dumps({
                 'type': 'error',
                 'message': 'Phòng không tồn tại'
             }))
             return
+        
         if room.is_full():
             await websocket.send(json.dumps({
                 'type': 'error',
                 'message': 'Phòng đã đầy (2/2 người chơi)'
             }))
             return
+        
+        # Thêm người chơi vào phòng
         player_name = self.clients[websocket]['name']
         if room.add_player(websocket, player_name):
             self.clients[websocket]['room_id'] = room_id
+            
+            # Thông báo cho tất cả trong phòng
             room_info = self.get_room_info_with_player_ids(room)
+            
             await self.broadcast_to_room(room_id, {
                 'type': 'player_joined',
                 'player_name': player_name,
                 'room': room_info
             })
+            
+            # Cập nhật danh sách phòng cho tất cả
             await self.broadcast_rooms_update()
+            
             print(f"{player_name} tham gia phòng {room_id}")
         else:
             await websocket.send(json.dumps({
@@ -298,40 +302,60 @@ class GameServer:
             }))
     
     async def handle_leave_room(self, websocket: websockets.WebSocketServerProtocol):
+        """Rời phòng"""
         room_id = self.get_player_room(websocket)
         if not room_id:
             return
+        
         room = self.get_room(room_id)
         player_name = self.clients[websocket]['name']
+        
         room.remove_player(websocket)
         self.clients[websocket]['room_id'] = None
+        
+        # Thông báo cho những người còn lại
         room_info = self.get_room_info_with_player_ids(room)
+        
         await self.broadcast_to_room(room_id, {
             'type': 'player_left',
             'player_name': player_name,
             'room': room_info
         })
+        
+        # Cập nhật danh sách phòng cho tất cả
         await self.broadcast_rooms_update()
+        
+        # Nếu phòng trống, xóa phòng
         if len(room.players) == 0:
             self.remove_room(room_id)
             await self.broadcast_rooms_update()
+        
         print(f"{player_name} rời phòng {room_id}")
     
     async def handle_ready(self, websocket: websockets.WebSocketServerProtocol):
+        """Người chơi sẵn sàng"""
         room_id = self.get_player_room(websocket)
         if not room_id:
             return
+        
         room = self.get_room(room_id)
         room.ready_players.add(websocket)
+        
+        # Thông báo cho phòng
         room_info = self.get_room_info_with_player_ids(room)
+        
         await self.broadcast_to_room(room_id, {
             'type': 'player_ready',
             'player_name': self.clients[websocket]['name'],
             'room': room_info
         })
+        
+        # Kiểm tra có thể bắt đầu game không
         if room.can_start_game():
             room.game_state = 'playing'
+            # Kiểm tra xem có phải ván đầu tiên không (dựa vào điểm số)
             is_first_game = all(room.scores[p]['wins'] == 0 and room.scores[p]['losses'] == 0 and room.scores[p]['draws'] == 0 for p in room.players)
+            
             await self.broadcast_to_room(room_id, {
                 'type': 'game_start',
                 'room': room.get_room_info(),
@@ -340,58 +364,86 @@ class GameServer:
             })
     
     async def handle_choice(self, websocket: websockets.WebSocketServerProtocol, choice: str):
+        """Xử lý lựa chọn của người chơi"""
         room_id = self.get_player_room(websocket)
         if not room_id:
             return
+        
         room = self.get_room(room_id)
         if room.game_state != 'playing':
             return
+        
         room.choices[websocket] = choice
         player_name = self.clients[websocket]['name']
+        
+        # Thông báo cho phòng
         await self.broadcast_to_room(room_id, {
             'type': 'player_chose',
             'player_name': player_name
         })
+        
+        # Kiểm tra nếu tất cả đã chọn
         if len(room.choices) == len(room.players):
             await self.process_game_result(room_id)
     
     async def process_game_result(self, room_id: str):
+        """Xử lý kết quả game"""
         room = self.get_room(room_id)
+        
+        # Nhóm lựa chọn theo loại
         choices_by_type = {}
         for player, choice in room.choices.items():
             if choice not in choices_by_type:
                 choices_by_type[choice] = []
             choices_by_type[choice].append(player)
+        
+        # So sánh và tính kết quả
         results = self.compare_choices(choices_by_type)
+        
+        # Cập nhật điểm số
         self.update_scores(room, results)
+        
+        # Gửi kết quả cho tất cả người chơi
         game_result = {
             'type': 'game_result',
             'choices': {self.clients[p]['name']: c for p, c in room.choices.items()},
             'results': {self.clients[p]['name']: r for p, r in results.items()},
             'scores': {self.clients[p]['name']: {'wins': room.scores[p]['wins'], 'losses': room.scores[p]['losses'], 'draws': room.scores[p]['draws']} for p in room.players}
         }
+        
         await self.broadcast_to_room(room_id, game_result)
+        
+        # Gửi thông tin phòng cập nhật với điểm số mới
         await self.broadcast_to_room(room_id, {
             'type': 'room_updated',
             'room': self.get_room_info_with_player_ids(room)
         })
+        
+        # Reset cho vòng tiếp theo
         room.choices.clear()
         room.ready_players.clear()
         room.game_state = 'waiting'
+        
         print(f"Kết quả phòng {room_id}: {game_result['results']}")
     
     async def handle_new_game_request(self, websocket: websockets.WebSocketServerProtocol):
+        """Xử lý yêu cầu chơi lại"""
         room_id = self.get_player_room(websocket)
         if not room_id:
             return
+        
         room = self.get_room(room_id)
         room.ready_players.add(websocket)
+        
+        # Thông báo cho phòng về người chơi đã bấm chơi lại
         player_name = self.clients[websocket]['name']
         await self.broadcast_to_room(room_id, {
             'type': 'player_ready_for_new_game',
             'player_name': player_name,
             'room': self.get_room_info_with_player_ids(room)
         })
+        
+        # Nếu tất cả đều sẵn sàng chơi lại
         if len(room.ready_players) == len(room.players):
             room.game_state = 'playing'
             await self.broadcast_to_room(room_id, {
@@ -402,7 +454,10 @@ class GameServer:
             })
     
     async def handle_set_name(self, websocket: websockets.WebSocketServerProtocol, name: str):
+        """Đặt tên người chơi"""
         self.clients[websocket]['name'] = name
+        
+        # Cập nhật tên trong phòng nếu đang ở phòng
         room_id = self.get_player_room(websocket)
         if room_id:
             room = self.get_room(room_id)
@@ -415,6 +470,7 @@ class GameServer:
                 })
     
     async def broadcast_to_room(self, room_id: str, message: dict):
+        """Gửi tin nhắn cho tất cả trong phòng"""
         room = self.get_room(room_id)
         if room:
             for player in room.players:
@@ -424,6 +480,7 @@ class GameServer:
                     pass
     
     async def broadcast_rooms_update(self):
+        """Gửi cập nhật danh sách phòng cho tất cả"""
         rooms_list = self.get_rooms_list()
         for client in self.clients.keys():
             try:
@@ -435,7 +492,11 @@ class GameServer:
                 pass
     
     async def cleanup_client(self, websocket: websockets.WebSocketServerProtocol):
+        """Dọn dẹp khi client ngắt kết nối"""
+        # Rời phòng nếu đang ở trong phòng
         await self.handle_leave_room(websocket)
+        
+        # Xóa khỏi danh sách clients
         if websocket in self.clients:
             del self.clients[websocket]
 
@@ -445,11 +506,13 @@ game_server = GameServer()
 async def handler(websocket, path):
     await game_server.handle_client(websocket, path)
 
+# Khởi động server
 async def main():
     print("🚀 Server Kéo Búa Bao đang khởi động...")
     print("📍 Địa chỉ: ws://localhost:8082")
     print("⏳ Đang chờ kết nối...")
     print("🎮 Hỗ trợ 2 người chơi/phòng")
+    
     async with websockets.serve(handler, "localhost", 8082):
         await asyncio.Future()  # Chạy vô hạn
 

@@ -35,8 +35,9 @@
           <button class="action-btn secondary" onclick="refreshRooms()">
             🔄 Làm mới danh sách
           </button>
-          <button class="action-btn" onclick="startVsBot()">
-            🤖 Chơi với máy</button>
+          <button class="action-btn secondary" onclick="startVsBot()">
+            🤖 Chơi với máy
+          </button>
         </div>
 
         <div class="rooms-section">
@@ -99,7 +100,21 @@
             <p id="game-status">Chờ người chơi tham gia...</p>
             <p id="game-result">Chọn lựa của bạn:</p>
           </div>
-        
+          <div
+            id="countdown-timer"
+            class="countdown-timer"
+            style="
+              text-align: center;
+              color: #dc3545;
+              font-weight: bold;
+              font-size: 18px;
+              margin-bottom: 10px;
+              display: none;
+            "
+          >
+            Thời gian còn lại: <span id="timer-value">10</span> giây
+          </div>
+
           <div class="choices">
             <button
               class="choice-btn"
@@ -147,7 +162,7 @@
             🔄 Chơi lại
           </button>
         </div>
-         <!-- Chat section -->
+        <!-- Chat section -->
         <div class="chat-section">
           <h3>💬 Chat phòng</h3>
           <div id="chat-messages" class="chat-messages"></div>
