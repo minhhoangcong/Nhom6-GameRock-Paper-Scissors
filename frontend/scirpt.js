@@ -6,6 +6,10 @@ let gameHistory = [];
 let isWaitingForOpponent = false;
 let currentChoice = null;
 let isReady = false;
+let countdownInterval = null;
+let timeLeft = 10;
+let hasChosenThisRound = false;
+
 
 // Khởi tạo kết nối WebSocket
 function initWebSocket() {
@@ -79,6 +83,7 @@ function handleServerMessage(data) {
             updateRoomInfo(data.room);
             updateGameStatus("Trò chơi bắt đầu! Chọn lựa của bạn:");
             // Chỉ bật các nút lựa chọn nếu đây là ván đầu tiên hoặc cả 2 đã bấm chơi lại
+            startCountdownTimer(10);
             if (data.is_first_game || data.both_ready) {
                 enableChoices();
             } else {
@@ -517,6 +522,9 @@ function requestNewGame() {
 
 sendChoice()   
 function sendChoice(choice) {
+    hasChosenThisRound = true;
+clearCountdownTimer();
+
   // Nếu đang chơi với Bot
   if (currentRoom && currentRoom.room_name === "Bạn vs Máy") {
     currentChoice = choice;
@@ -790,4 +798,35 @@ function addChatMessage(sender, message) {
   div.innerHTML = `<b>${nameDisplay}:</b> ${message}`;
   chatBox.appendChild(div);
   chatBox.scrollTop = chatBox.scrollHeight;
+}
+function startCountdownTimer(duration = 10) {
+  clearCountdownTimer();
+  timeLeft = duration;
+  hasChosenThisRound = false;
+  document.getElementById("countdown-timer").style.display = "block";
+  document.getElementById("timer-value").textContent = timeLeft;
+
+  countdownInterval = setInterval(() => {
+    timeLeft -= 1;
+    document.getElementById("timer-value").textContent = timeLeft;
+    if (timeLeft <= 0) {
+      clearCountdownTimer();
+      if (!hasChosenThisRound && currentRoom && currentRoom.room_name !== "Bạn vs Máy") {
+        // Random tự động chọn nếu chưa chọn
+        const randomChoices = ["rock", "paper", "scissors"];
+        const autoChoice = randomChoices[Math.floor(Math.random() * 3)];
+        sendChoice(autoChoice, true); // true = auto
+      }
+      // Ẩn timer sau khi hết giờ
+      document.getElementById("countdown-timer").style.display = "none";
+    }
+  }, 1000);
+}
+
+function clearCountdownTimer() {
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+  }
+  document.getElementById("countdown-timer").style.display = "none";
 }
