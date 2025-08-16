@@ -667,6 +667,7 @@ function getResultAgainstBot(player, bot) {
     }
     return 'lose';
 }
+
 // Thêm vào lịch sử
 function addToHistory(choices, results) {
     const choiceNames = {
@@ -718,7 +719,6 @@ function updateHistoryDisplay() {
         historyList.appendChild(div);
     });
 }
-
 // Lấy text kết quả
 function getResultText(result) {
     switch (result) {
@@ -728,7 +728,6 @@ function getResultText(result) {
         default: return 'Không xác định';
     }
 }
-
 // Hiển thị thông báo
 function showNotification(message, type = 'info') {
     const notification = document.getElementById('notification');

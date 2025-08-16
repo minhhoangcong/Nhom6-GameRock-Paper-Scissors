@@ -7,6 +7,7 @@ from typing import Dict, List, Set
 
 class GameRoom:
     def __init__(self, room_id: str, room_name: str, max_players: int = 2):
+        self.round_task = None  # asyncio.Task đếm giờ cho ván hiện tại
         self.room_id = room_id
         self.room_name = room_name
         self.max_players = max_players
@@ -79,7 +80,35 @@ class GameServer:
     def remove_room(self, room_id: str):
         if room_id in self.rooms:
             del self.rooms[room_id]
-    
+
+    def _start_round_timer(self, room: GameRoom, seconds: int = 10):
+        """Bắt đầu (hoặc reset) bộ đếm cho ván hiện tại."""
+        # Hủy timer cũ nếu có
+        if getattr(room, 'round_task', None):
+            try:
+                room.round_task.cancel()
+            except Exception:
+                pass
+        # Tạo timer mới
+        room.round_task = asyncio.create_task(self._round_timeout(room.room_id, seconds))
+        
+        async def _round_timeout(self, room_id: str, seconds: int):
+            """Hết giờ: tự chốt lựa chọn cho ai chưa chọn và công bố kết quả."""
+            try:
+                await asyncio.sleep(seconds)
+                room = self.get_room(room_id)
+                if not room or room.game_state != 'playing':
+                    return
+                # Gán lựa chọn ngẫu nhiên cho ai chưa chọn
+                for p in room.players:
+                    if p not in room.choices:
+                        room.choices[p] = random.choice(['rock', 'paper', 'scissors'])
+                # Công bố kết quả
+                await self.process_game_result(room_id)
+            except asyncio.CancelledError:
+                #Timer bị hủy (do mọi người chọn xong sớm hoặc người chơi rời)
+                pass
+
     def get_room_info_with_player_ids(self, room: GameRoom):
         """Lấy thông tin phòng với player_id cho mỗi người chơi"""
         room_info = room.get_room_info()
@@ -499,6 +528,7 @@ class GameServer:
         # Xóa khỏi danh sách clients
         if websocket in self.clients:
             del self.clients[websocket]
+    
 
 # Khởi tạo server
 game_server = GameServer()
@@ -518,3 +548,6 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+
