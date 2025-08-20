@@ -16,7 +16,10 @@ class GameRoom:
         self.scores: Dict[websockets.WebSocketServerProtocol, dict] = {}
         self.game_state = 'waiting'  # waiting, playing, finished
         self.ready_players: Set[websockets.WebSocketServerProtocol] = set()
-        
+        self.series_best_of = 3          # Bo3
+        self.series_wins = {}            # map: websocket -> số ván thắng trong series hiện tại
+        self.series_over = False         # đã kết thúc series hay chưa
+
     def add_player(self, player: websockets.WebSocketServerProtocol, player_name: str):
         if len(self.players) < self.max_players:
             self.players.append(player)
@@ -157,6 +160,27 @@ class GameServer:
                 pass
         # Tạo timer mới
         room.round_task = asyncio.create_task(self._round_timeout(room.room_id, seconds))
+    def ensure_series_keys(self, room: GameRoom):
+        """Đảm bảo mọi người trong phòng đều có key trong series_wins."""
+        for p in room.players:
+            if p not in room.series_wins:
+                room.series_wins[p] = 0
+
+    def reset_series(self, room: GameRoom):
+        """Bắt đầu một series mới (reset số ván thắng, bỏ trạng thái kết thúc)."""
+        room.series_wins = {}
+        for p in room.players:
+            room.series_wins[p] = 0
+        room.series_over = False
+
+    def series_wins_by_id(self, room: GameRoom):
+        """Trả về dict {player_id: wins} để client hiển thị dễ dàng."""
+        out = {}
+        for p in room.players:
+            pid = self.clients[p]['id']
+            out[pid] = room.series_wins.get(p, 0)
+        return out
+
 
     async def _round_timeout(self, room_id: str, seconds: int):
         """Hết giờ: tự chốt lựa chọn cho ai chưa chọn và công bố kết quả."""
@@ -329,7 +353,7 @@ class GameServer:
         player_name = self.clients[websocket]['name']
         if room.add_player(websocket, player_name):
             self.clients[websocket]['room_id'] = room_id
-            
+            self.ensure_series_keys(room)  # đảm bảo có key series cho người mới
             # Thông báo cho tất cả trong phòng
             room_info = self.get_room_info_with_player_ids(room)
             
@@ -388,37 +412,51 @@ class GameServer:
         
         print(f"{player_name} rời phòng {room_id}")
     
-    async def handle_ready(self, websocket: websockets.WebSocketServerProtocol):
+    async def handle_ready(self, websocket):
         """Người chơi sẵn sàng"""
         room_id = self.get_player_room(websocket)
         if not room_id:
             return
-        
+
         room = self.get_room(room_id)
         room.ready_players.add(websocket)
-        
-        # Thông báo cho phòng
+
+        # Thông báo ai vừa ready
         room_info = self.get_room_info_with_player_ids(room)
-        
         await self.broadcast_to_room(room_id, {
             'type': 'player_ready',
             'player_name': self.clients[websocket]['name'],
             'room': room_info
         })
-        
-        # Kiểm tra có thể bắt đầu game không
+
+        # ✅ Chỉ khi tất cả cùng sẵn sàng mới bắt đầu
         if room.can_start_game():
+            if room.series_over:
+                self.reset_series(room)
+
             room.game_state = 'playing'
-            # Kiểm tra xem có phải ván đầu tiên không (dựa vào điểm số)
-            is_first_game = all(room.scores[p]['wins'] == 0 and room.scores[p]['losses'] == 0 and room.scores[p]['draws'] == 0 for p in room.players)
-            
+            is_first_game = all(
+                room.scores[p]['wins'] == 0 and
+                room.scores[p]['losses'] == 0 and
+                room.scores[p]['draws'] == 0
+                for p in room.players
+            )
+
             await self.broadcast_to_room(room_id, {
                 'type': 'game_start',
-                'room': room.get_room_info(),
+                'room': self.get_room_info_with_player_ids(room),
                 'is_first_game': is_first_game,
-                'both_ready': True
+                'both_ready': True,
+                'series': {
+                    'best_of': room.series_best_of,
+                    'wins': self.series_wins_by_id(room),
+                    'over': room.series_over,
+                    'winner_id': None
+                }
             })
-            self._start_round_timer(room, 10)  # <— thêm dòng này
+            # 🕒 Bắt đầu timer server-side 10s
+            self._start_round_timer(room, 10)
+
     
     async def handle_choice(self, websocket: websockets.WebSocketServerProtocol, choice: str):
         """Xử lý lựa chọn của người chơi"""
@@ -444,9 +482,11 @@ class GameServer:
             await self.process_game_result(room_id)
     
     async def process_game_result(self, room_id: str):
-        """Xử lý kết quả game"""
+        """Xử lý kết quả game (cộng điểm + Bo3)"""
         room = self.get_room(room_id)
-        # TODO:
+        if not room:
+            return
+
         # Hủy timer nếu còn chạy
         if getattr(room, 'round_task', None):
             try:
@@ -454,70 +494,105 @@ class GameServer:
             except Exception:
                 pass
             room.round_task = None
-        
+
         # Nhóm lựa chọn theo loại
         choices_by_type = {}
         for player, choice in room.choices.items():
             if choice not in choices_by_type:
                 choices_by_type[choice] = []
             choices_by_type[choice].append(player)
-        
+
         # So sánh và tính kết quả
         results = self.compare_choices(choices_by_type)
-        
-        # Cập nhật điểm số
+
+        # Cập nhật điểm số bảng tổng (thắng/thua/hòa)
         self.update_scores(room, results)
-        
-        # Gửi kết quả cho tất cả người chơi
+
+        # ---- Bo3: Cộng điểm series cho người THẮNG (không cộng khi hòa) ----
+        self.ensure_series_keys(room)
+        for p, r in results.items():
+            if r == 'win':
+                room.series_wins[p] = room.series_wins.get(p, 0) + 1
+    
+        # Kiểm tra kết thúc series
+        target = (room.series_best_of + 1) // 2  # Bo3 -> 2; Bo5 -> 3
+        winner_ws = None
+        for p, w in room.series_wins.items():
+            if w >= target:
+                room.series_over = True
+                winner_ws = p
+                break
+
+        # Payload gửi xuống client (thêm nhánh 'series')
         game_result = {
             'type': 'game_result',
             'choices': {self.clients[p]['name']: c for p, c in room.choices.items()},
             'results': {self.clients[p]['name']: r for p, r in results.items()},
-            'scores': {self.clients[p]['name']: {'wins': room.scores[p]['wins'], 'losses': room.scores[p]['losses'], 'draws': room.scores[p]['draws']} for p in room.players}
+            'scores': {self.clients[p]['name']: {
+                'wins': room.scores[p]['wins'], 'losses': room.scores[p]['losses'], 'draws': room.scores[p]['draws']
+            } for p in room.players},
+            'series': {
+                'best_of': room.series_best_of,
+                'wins': self.series_wins_by_id(room),             # {player_id: wins}
+                'over': room.series_over,
+                'winner_id': self.clients[winner_ws]['id'] if winner_ws else None
+            }
         }
-        
+
         await self.broadcast_to_room(room_id, game_result)
-        
-        # Gửi thông tin phòng cập nhật với điểm số mới
+
+        # Cập nhật thông tin phòng (client cần player_id)
         await self.broadcast_to_room(room_id, {
             'type': 'room_updated',
             'room': self.get_room_info_with_player_ids(room)
         })
-        
-        # Reset cho vòng tiếp theo
+
+        # Reset cho vòng tiếp theo (không reset series ở đây!)
         room.choices.clear()
         room.ready_players.clear()
         room.game_state = 'waiting'
-        
+
         print(f"Kết quả phòng {room_id}: {game_result['results']}")
+
     
-    async def handle_new_game_request(self, websocket: websockets.WebSocketServerProtocol):
+    async def handle_new_game_request(self, websocket):
         """Xử lý yêu cầu chơi lại"""
         room_id = self.get_player_room(websocket)
         if not room_id:
             return
-        
         room = self.get_room(room_id)
         room.ready_players.add(websocket)
-        
-        # Thông báo cho phòng về người chơi đã bấm chơi lại
+    
+        # Thông báo người đã bấm Chơi lại
         player_name = self.clients[websocket]['name']
         await self.broadcast_to_room(room_id, {
             'type': 'player_ready_for_new_game',
             'player_name': player_name,
             'room': self.get_room_info_with_player_ids(room)
         })
-        
-        # Nếu tất cả đều sẵn sàng chơi lại
+
+        # ✅ Khi cả hai đều bấm Chơi lại
         if len(room.ready_players) == len(room.players):
+            if room.series_over:
+                self.reset_series(room)
+
             room.game_state = 'playing'
             await self.broadcast_to_room(room_id, {
                 'type': 'game_start',
                 'room': self.get_room_info_with_player_ids(room),
                 'is_first_game': False,
-                'both_ready': True
+                'both_ready': True,
+                'series': {
+                    'best_of': room.series_best_of,
+                    'wins': self.series_wins_by_id(room),
+                    'over': room.series_over,
+                    'winner_id': None
+                }
             })
-            self._start_round_timer(room, 10)  # <— thêm dòng này
+            # 🕒 Timer cho ván mới
+            self._start_round_timer(room, 10)
+
+
     
     async def handle_set_name(self, websocket: websockets.WebSocketServerProtocol, name: str):
         """Đặt tên người chơi"""
