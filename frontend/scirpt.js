@@ -193,39 +193,36 @@ function updateRoomsList(rooms) {
 
   roomsList.innerHTML = rooms
     .map((room) => {
-      const isFull = room.current_players >= 2;
+      const isFull = room.current_players >= 2; // Luôn là 2 người
       const canJoin = !isFull && room.current_players < 2;
-      const lockIcon = room.has_password ? "🔒" : "🔓";
 
       return `
-    <div class="room-card ${isFull ? "full" : ""}"
-         onclick="${
-           isFull
-             ? ""
-             : `joinRoomWithPassword('${room.room_id}', ${room.has_password})`
-         }">
-      <div class="room-header">
-        <div class="room-name">${lockIcon} ${room.room_name}</div>
-        <div class="room-status">${getGameStateText(room.game_state)}</div>
-      </div>
-      <div class="room-players">
-        <span>👥 ${room.current_players}/2 người chơi</span>
-        ${
-          canJoin
-            ? `<button class="join-btn"
-                onclick="event.stopPropagation(); joinRoomWithPassword('${
-                  room.room_id
-                }', ${room.has_password})">
-                ${room.has_password ? "Tham gia (🔒)" : "Tham gia"}
-               </button>`
-            : '<span style="color:#dc3545;">Đã đầy</span>'
-        }
-      </div>
-      <div class="room-players">
-        <span>Người chơi: ${room.players.map((p) => p.name).join(", ")}</span>
-      </div>
-    </div>
-  `;
+                <div class="room-card ${isFull ? "full" : ""}" onclick="${
+        isFull ? "" : `joinRoom('${room.room_id}')`
+      }">
+                    <div class="room-header">
+                        <div class="room-name">${room.room_name}</div>
+                        <div class="room-status">${getGameStateText(
+                          room.game_state
+                        )}</div>
+                    </div>
+                    <div class="room-players">
+                        <span>👥 ${room.current_players}/2 người chơi</span>
+                        ${
+                          canJoin
+                            ? '<button class="join-btn" onclick="event.stopPropagation(); joinRoom(\'' +
+                              room.room_id +
+                              "')\">Tham gia</button>"
+                            : '<span style="color: #dc3545;">Đã đầy</span>'
+                        }
+                    </div>
+                    <div class="room-players">
+                        <span>Người chơi: ${room.players
+                          .map((p) => p.name)
+                          .join(", ")}</span>
+                    </div>
+                </div>
+            `;
     })
     .join("");
 }
@@ -248,30 +245,13 @@ function getGameStateText(state) {
 function createRoom() {
   const roomName =
     document.getElementById("room-name").value.trim() || `Phòng ${Date.now()}`;
-  const usePw = document.getElementById("use-password")?.checked;
-  const password = usePw
-    ? (document.getElementById("room-password").value || "").trim()
-    : "";
 
   ws.send(
     JSON.stringify({
       type: "create_room",
       room_name: roomName,
-      max_players: 2,
-      password: password || undefined, // gửi undefined nếu để trống
+      max_players: 2, // Luôn tạo phòng 2 người
     })
-  );
-}
-//Đặt mk phòng
-function joinRoomWithPassword(roomId, hasPassword) {
-  if (!hasPassword) {
-    joinRoom(roomId);
-    return;
-  }
-  const pwd = prompt("Phòng này có mật khẩu. Nhập mật khẩu để tham gia:");
-  if (pwd === null) return; // bấm Cancel
-  ws.send(
-    JSON.stringify({ type: "join_room", room_id: roomId, password: pwd })
   );
 }
 
@@ -497,7 +477,7 @@ function handleGameResult(data) {
   const { choices, results, scores } = data;
 
   // Hiển thị kết quả
-  const choiceNames = { rock: "Búa ✊", paper: "Bao 🤚", scissors: "Kéo ✌️" };
+  const choiceNames = { rock: "Búa 🪨", paper: "Bao 🤚", scissors: "Kéo ✌️" };
   let resultText = "Kết quả:\n";
   for (const [n, choice] of Object.entries(choices)) {
     resultText += `${n}: ${choiceNames[choice]}\n`;
@@ -640,7 +620,7 @@ function sendChoice(choice) {
 
     // Hiển thị kết quả một ván
     const getChoiceText = (c) =>
-      c === "rock" ? "Búa ✊" : c === "paper" ? "Bao 🤚" : "Kéo ✌️";
+      c === "rock" ? "Búa 🪨" : c === "paper" ? "Bao 📄" : "Kéo ✂️";
     updateGameResult(
       `Bạn chọn ${getChoiceText(choice)} - Bot chọn ${getChoiceText(botChoice)}`
     );
@@ -901,7 +881,6 @@ function hideReadyButton() {
 // Hiển thị nút sẵn sàng
 function showReadyButton() {
   const readyBtn = document.getElementById("ready-btn");
-  isReady = false;
   readyBtn.style.display = "block";
   readyBtn.textContent = "✅ Sẵn sàng";
   readyBtn.classList.remove("ready");
@@ -1013,38 +992,6 @@ document.addEventListener("DOMContentLoaded", () => {
       createRoom();
     }
   });
-  //
-  const usePw = document.getElementById("use-password");
-  const pwWrap = document.getElementById("password-wrap");
-  const pwInput = document.getElementById("room-password");
-  const eyeBtn = document.getElementById("pw-eye");
-  if (usePw && pwWrap) {
-    usePw.addEventListener("change", () => {
-      pwWrap.style.display = usePw.checked ? "block" : "none";
-      // reset kiểu input + biểu tượng khi tắt
-      if (!usePw.checked && pwInput && eyeBtn) {
-        pwInput.type = "password";
-        eyeBtn.textContent = "👁";
-        eyeBtn.setAttribute("aria-label", "Hiện mật khẩu");
-      }
-    });
-  }
-
-  // toggle con mắt
-  if (eyeBtn && pwInput) {
-    eyeBtn.addEventListener("click", () => {
-      const hidden = pwInput.type === "password";
-      pwInput.type = hidden ? "text" : "password";
-      eyeBtn.textContent = hidden ? "🙈" : "👁"; // đổi icon
-      eyeBtn.setAttribute(
-        "aria-label",
-        hidden ? "Ẩn mật khẩu" : "Hiện mật khẩu"
-      );
-      // giữ nguyên vị trí con trỏ
-      pwInput.focus();
-      pwInput.setSelectionRange(pwInput.value.length, pwInput.value.length);
-    });
-  }
   document.addEventListener(
     "click",
     function onFirstInteraction() {
@@ -1189,31 +1136,28 @@ function effectivePlayerName() {
 
 //Thêm hàm quickPlay
 function quickPlay() {
+  // Dùng danh sách đã có ngay nếu sẵn
   const rooms = Array.isArray(latestRooms) ? latestRooms : [];
+
+  // Ưu tiên phòng còn slot (chưa đủ 2) và đang ở trạng thái “waiting”
   const candidates = rooms
-    .filter((r) => !r.has_password) // bỏ qua phòng có mật khẩu
     .filter((r) => Number(r.current_players) < 2)
     .sort((a, b) => {
+      // waiting lên trước playing/finished (an toàn)
       const rank = (s) => (s === "waiting" ? 0 : s === "playing" ? 1 : 2);
       return rank(a.game_state) - rank(b.game_state);
     });
 
   if (candidates.length > 0) {
+    // Thử join phòng đầu tiên phù hợp
     joinRoom(candidates[0].room_id);
     return;
   }
 
-  // Không có phòng public phù hợp -> tạo nhanh (không mật khẩu)
+  // Không có phòng phù hợp -> tạo phòng mới
   document.getElementById("room-name").value = `Phòng ${Date.now()}`;
-  // đảm bảo không gửi password
-  if (document.getElementById("use-password")) {
-    document.getElementById("use-password").checked = false;
-    const pwWrap = document.getElementById("password-wrap");
-    if (pwWrap) pwWrap.style.display = "none";
-  }
   createRoom();
 }
-
 //Hàm ping
 function updatePingUI(rtt) {
   const el = document.getElementById("ping-value");
