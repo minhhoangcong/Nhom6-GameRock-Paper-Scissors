@@ -950,3 +950,38 @@ h1 {
   color: #ff2222;
   font-weight: bold;
 }
+.net-stats {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #555;
+}
+.ping-good {
+  color: #28a745;
+  font-weight: 600;
+} /* xanh */
+.ping-ok {
+  color: #ff9800;
+  font-weight: 600;
+} /* cam */
+.ping-bad {
+  color: #dc3545;
+  font-weight: 600;
+} /* đỏ */
+.audio-controls {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 10px 0 20px;
+}
+.audio-controls button {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #6c757d;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+.audio-controls button:hover {
+  background: #545b62;
+}
