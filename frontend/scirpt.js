@@ -652,6 +652,7 @@ function hideReadyButton() {
 // Hiển thị nút sẵn sàng
 function showReadyButton() {
     const readyBtn = document.getElementById('ready-btn');
+    isReady = false; // reset state để ko bấm 2 lần
     readyBtn.style.display = 'block';
     readyBtn.textContent = '✅ Sẵn sàng';
     readyBtn.classList.remove('ready');
