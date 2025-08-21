@@ -5,10 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kéo Búa Bao - Multiplayer Rooms</title>
     <link rel="stylesheet" href="style.css" />
+    <audio id="bgm" src="assets/sounds/bgm.mp3" preload="auto" loop></audio>
+    <audio
+      id="ui-click-sound"
+      src="assets/sounds/ui-click.mp3"
+      preload="auto"
+    ></audio>
+
+    <audio
+      id="click-sound"
+      src="assets/sounds/click.mp3"
+      preload="auto"
+    ></audio>
+    <audio id="win-sound" src="assets/sounds/win.mp3" preload="auto"></audio>
+    <audio id="lose-sound" src="assets/sounds/lose.mp3" preload="auto"></audio>
+    <audio id="draw-sound" src="assets/sounds/draw.mp3" preload="auto"></audio>
   </head>
   <body>
     <div class="container">
-      <h1>🪨 📄 ✂️ Kéo Búa Bao - Multiplayer</h1>
+      <h1>✊️ 🤚 ✌ Kéo Búa Bao - Multiplayer</h1>
+      <div class="audio-controls">
+        <button id="bgm-toggle" onclick="toggleBGM()">🎵 Nhạc: Tắt</button>
+        <button id="sfx-toggle" onclick="toggleSFX()">🔔 Hiệu ứng: Bật</button>
+      </div>
 
       <!-- Màn hình chính -->
       <div id="main-screen" class="screen active">
@@ -26,6 +45,9 @@
           <div class="current-player">
             <span>Người chơi: <span id="player-id">Đang kết nối...</span></span>
           </div>
+          <div class="net-stats">
+            📶 Ping: <span id="ping-value">--</span> ms
+          </div>
         </div>
 
         <div class="main-actions">
@@ -37,6 +59,9 @@
           </button>
           <button class="action-btn secondary" onclick="startVsBot()">
             🤖 Chơi với máy
+          </button>
+          <button class="action-btn primary" onclick="quickPlay()">
+            ⚡ Chơi ngay
           </button>
         </div>
 
@@ -60,6 +85,43 @@
             maxlength="30"
           />
         </div>
+        <!-- HÀNG: label bên trái, công tắc bên phải -->
+        <div class="form-row password-row">
+          <label for="use-password" class="form-label"
+            >Đặt mật khẩu cho phòng</label
+          >
+
+          <!-- Toggle đẹp, vẫn là checkbox với id cũ để JS không đổi -->
+          <label class="switch">
+            <input type="checkbox" id="use-password" />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Ô nhập mật khẩu (ẩn khi chưa bật) -->
+        <div class="form-group" id="password-wrap" style="display: none">
+          <label for="room-password" class="form-label">Mật khẩu:</label>
+
+          <!-- ô nhập kèm nút con mắt -->
+          <div class="input-with-eye">
+            <input
+              type="password"
+              id="room-password"
+              placeholder="Nhập mật khẩu..."
+              maxlength="30"
+              autocomplete="new-password"
+            />
+            <button
+              type="button"
+              id="pw-eye"
+              class="eye-btn"
+              aria-label="Hiện mật khẩu"
+            >
+              👁
+            </button>
+          </div>
+        </div>
+
         <div class="form-group">
           <label for="max-players">Số người chơi:</label>
           <select id="max-players" disabled>
@@ -84,103 +146,124 @@
           <button class="leave-btn" onclick="leaveRoom()">🚪 Rời phòng</button>
         </div>
 
-        <div class="room-info">
-          <div class="players-list">
-            <h3>👥 Người chơi trong phòng</h3>
-            <div id="players-list"></div>
-          </div>
-          <div class="scoreboard">
-            <h3>🏆 Bảng điểm</h3>
-            <div id="scoreboard"></div>
-          </div>
-        </div>
+        <!-- ========= GAME ROOM LAYOUT (2 COLUMNS) ========= -->
+        <section class="room-shell">
+          <div class="room-grid">
+            <!-- LEFT: status + series + choices + history -->
+            <div class="room-left">
+              <div class="section-card sticky-status">
+                <div id="game-status" class="game-status-text">
+                  Chờ người chơi tham gia...
+                </div>
+                <!-- Ô Bo3: BẮT BUỘC có để hiển thị series PvP -->
+                <div
+                  id="series-status"
+                  style="margin-top: 6px; font-weight: 600; display: none"
+                ></div>
 
-        <div class="game-section">
-          <div class="game-status">
-            <p id="game-status">Chờ người chơi tham gia...</p>
-            <p id="game-result">Chọn lựa của bạn:</p>
-          </div>
-          <div id="countdown-timer" class="countdown-timer" style="text-align:center; color:#dc3545; font-weight:bold; font-size:18px; margin-bottom:10px; display:none;">
-  Thời gian còn lại: <span id="timer-value">10</span> giây
-</div>
+                <!-- Đồng hồ 10s (giữ đúng id) -->
+                <div
+                  id="countdown-timer"
+                  class="countdown-timer"
+                  style="
+                    text-align: center;
+                    color: #dc3545;
+                    font-weight: bold;
+                    font-size: 18px;
+                    margin: 6px 0 10px;
+                    display: none;
+                  "
+                >
+                  Thời gian còn lại: <span id="timer-value">10</span> giây
+                </div>
 
-          <div
-            id="countdown-timer"
-            class="countdown-timer"
-            style="
-              text-align: center;
-              color: #dc3545;
-              font-weight: bold;
-              font-size: 18px;
-              margin-bottom: 10px;
-              display: none;
-            "
-          >
-            Thời gian còn lại: <span id="timer-value">10</span> giây
-          </div>
+                <div id="game-result" class="game-result-text"></div>
 
-          <div class="choices">
-            <button
-              class="choice-btn"
-              onclick="sendChoice('rock')"
-              id="rock-btn"
-            >
-              <div class="choice-icon">🪨</div>
-              <div class="choice-text">Búa</div>
-            </button>
-            <button
-              class="choice-btn"
-              onclick="sendChoice('paper')"
-              id="paper-btn"
-            >
-              <div class="choice-icon">📄</div>
-              <div class="choice-text">Bao</div>
-            </button>
-            <button
-              class="choice-btn"
-              onclick="sendChoice('scissors')"
-              id="scissors-btn"
-            >
-              <div class="choice-icon">✂️</div>
-              <div class="choice-text">Kéo</div>
-            </button>
-          </div>
+                <!-- 3 nút chọn: GIỮ NGUYÊN id & onclick -->
+                <div class="choices">
+                  <button
+                    class="choice-btn"
+                    onclick="sendChoice('rock')"
+                    id="rock-btn"
+                  >
+                    <div class="choice-icon">✊️</div>
+                    <div class="choice-text">Búa</div>
+                  </button>
+                  <button
+                    class="choice-btn"
+                    onclick="sendChoice('paper')"
+                    id="paper-btn"
+                  >
+                    <div class="choice-icon">🤚</div>
+                    <div class="choice-text">Bao</div>
+                  </button>
+                  <button
+                    class="choice-btn"
+                    onclick="sendChoice('scissors')"
+                    id="scissors-btn"
+                  >
+                    <div class="choice-icon">✌</div>
+                    <div class="choice-text">Kéo</div>
+                  </button>
+                </div>
 
-          <div class="ready-section">
-            <button id="ready-btn" class="ready-btn" onclick="toggleReady()">
-              ✅ Sẵn sàng
-            </button>
-          </div>
+                <div class="ready-section" style="margin-top: 10px">
+                  <button
+                    id="ready-btn"
+                    class="ready-btn"
+                    onclick="toggleReady()"
+                  >
+                    ✅ Sẵn sàng
+                  </button>
+                  <button
+                    id="new-game-btn"
+                    class="new-game-btn"
+                    onclick="requestNewGame()"
+                    style="display: none"
+                  >
+                    🔄 Chơi lại
+                  </button>
+                </div>
+              </div>
 
-          <div class="game-history">
-            <h3>📜 Lịch sử trận đấu</h3>
-            <div id="history-list"></div>
-          </div>
+              <div class="section-card">
+                <h3>🧾 Lịch sử trận đấu</h3>
+                <div id="history-list" class="scroll-box"></div>
+              </div>
+            </div>
 
-          <button
-            id="new-game-btn"
-            class="new-game-btn"
-            onclick="requestNewGame()"
-            style="display: none"
-          >
-            🔄 Chơi lại
-          </button>
-        </div>
-        <!-- Chat section -->
-        <div class="chat-section">
-          <h3>💬 Chat phòng</h3>
-          <div id="chat-messages" class="chat-messages"></div>
-          <div class="chat-input-row">
-            <input
-              type="text"
-              id="chat-input"
-              placeholder="Nhắn gì đó..."
-              maxlength="100"
-              autocomplete="off"
-            />
-            <button class="chat-send-btn" onclick="sendChat()">Gửi</button>
+            <!-- RIGHT: players + scoreboard + chat -->
+            <div class="room-right">
+              <div class="section-card">
+                <h3>👥 Người chơi trong phòng</h3>
+                <div id="players-list"></div>
+              </div>
+
+              <div class="section-card">
+                <h3>🏆 Bảng điểm</h3>
+                <div id="scoreboard"></div>
+              </div>
+
+              <div class="section-card">
+                <h3>💬 Chat phòng</h3>
+                <div id="chat-messages" class="chat-messages scroll-box"></div>
+                <div class="chat-input-row">
+                  <input
+                    type="text"
+                    id="chat-input"
+                    placeholder="Nhắn gì đó..."
+                    maxlength="100"
+                    autocomplete="off"
+                  />
+                  <button class="chat-send-btn" onclick="sendChat()">
+                    Gửi
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
+        <!-- ========= /GAME ROOM LAYOUT ========= -->
       </div>
 
       <!-- Thông báo -->
