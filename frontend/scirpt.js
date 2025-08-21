@@ -181,54 +181,36 @@ function handleServerMessage(data) {
   }
 }
 
-// Cập nhật danh sách phòng
-function updateRoomsList(rooms) {
-  const roomsList = document.getElementById("rooms-list");
-
-  if (rooms.length === 0) {
-    roomsList.innerHTML =
-      '<div class="loading">Không có phòng nào. Hãy tạo phòng mới!</div>';
-    return;
-  }
-
-  roomsList.innerHTML = rooms
-    .map((room) => {
-      const isFull = room.current_players >= 2;
-      const canJoin = !isFull && room.current_players < 2;
-      const lockIcon = room.has_password ? "🔒" : "🔓";
-
-      return `
-    <div class="room-card ${isFull ? "full" : ""}"
-         onclick="${
-           isFull
-             ? ""
-             : `joinRoomWithPassword('${room.room_id}', ${room.has_password})`
-         }">
-      <div class="room-header">
-        <div class="room-name">${lockIcon} ${room.room_name}</div>
-        <div class="room-status">${getGameStateText(room.game_state)}</div>
-      </div>
-      <div class="room-players">
-        <span>👥 ${room.current_players}/2 người chơi</span>
-        ${
-          canJoin
-            ? `<button class="join-btn"
-                onclick="event.stopPropagation(); joinRoomWithPassword('${
-                  room.room_id
-                }', ${room.has_password})">
-                ${room.has_password ? "Tham gia (🔒)" : "Tham gia"}
-               </button>`
-            : '<span style="color:#dc3545;">Đã đầy</span>'
+    // Cập nhật danh sách phòng
+    function updateRoomsList(rooms) {
+        const roomsList = document.getElementById('rooms-list');
+        
+        if (rooms.length === 0) {
+            roomsList.innerHTML = '<div class="loading">Không có phòng nào. Hãy tạo phòng mới!</div>';
+            return;
         }
-      </div>
-      <div class="room-players">
-        <span>Người chơi: ${room.players.map((p) => p.name).join(", ")}</span>
-      </div>
-    </div>
-  `;
-    })
-    .join("");
-}
+        
+        roomsList.innerHTML = rooms.map(room => {
+            const isFull = room.current_players >= 2; // Luôn là 2 người
+            const canJoin = !isFull && room.current_players < 2;
+            
+            return `
+                <div class="room-card ${isFull ? 'full' : ''}" onclick="${isFull ? '' : `joinRoom('${room.room_id}')`}">
+                    <div class="room-header">
+                        <div class="room-name">${room.room_name}</div>
+                        <div class="room-status">${getGameStateText(room.game_state)}</div>
+                    </div>
+                    <div class="room-players">
+                        <span>👥 ${room.current_players}/2 người chơi</span>
+                        ${canJoin ? '<button class="join-btn" onclick="event.stopPropagation(); joinRoom(\'' + room.room_id + '\')">Tham gia</button>' : '<span style="color: #dc3545;">Đã đầy</span>'}
+                    </div>
+                    <div class="room-players">
+                        <span>Người chơi: ${room.players.map(p => p.name).join(', ')}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
 
 // Lấy text trạng thái game
 function getGameStateText(state) {
@@ -246,33 +228,13 @@ function getGameStateText(state) {
 
 // Tạo phòng mới
 function createRoom() {
-  const roomName =
-    document.getElementById("room-name").value.trim() || `Phòng ${Date.now()}`;
-  const usePw = document.getElementById("use-password")?.checked;
-  const password = usePw
-    ? (document.getElementById("room-password").value || "").trim()
-    : "";
-
-  ws.send(
-    JSON.stringify({
-      type: "create_room",
-      room_name: roomName,
-      max_players: 2,
-      password: password || undefined, // gửi undefined nếu để trống
-    })
-  );
-}
-//Đặt mk phòng
-function joinRoomWithPassword(roomId, hasPassword) {
-  if (!hasPassword) {
-    joinRoom(roomId);
-    return;
-  }
-  const pwd = prompt("Phòng này có mật khẩu. Nhập mật khẩu để tham gia:");
-  if (pwd === null) return; // bấm Cancel
-  ws.send(
-    JSON.stringify({ type: "join_room", room_id: roomId, password: pwd })
-  );
+    const roomName = document.getElementById('room-name').value.trim() || `Phòng ${Date.now()}`;
+    
+    ws.send(JSON.stringify({
+        type: 'create_room',
+        room_name: roomName,
+        max_players: 2  // Luôn tạo phòng 2 người
+    }));
 }
 
 // Tham gia phòng
@@ -493,213 +455,52 @@ function getMyServerName() {
 
 // Xử lý kết quả game
 function handleGameResult(data) {
-  clearCountdownTimer(); // dừng đồng hồ khi có kết quả
-  const { choices, results, scores } = data;
-
-  // Hiển thị kết quả
-  const choiceNames = { rock: "Búa ✊", paper: "Bao 🤚", scissors: "Kéo ✌️" };
-  let resultText = "Kết quả:\n";
-  for (const [n, choice] of Object.entries(choices)) {
-    resultText += `${n}: ${choiceNames[choice]}\n`;
-  }
-  resultText += "\nKết quả:\n";
-  for (const [n, r] of Object.entries(results)) {
-    const emoji = r === "win" ? "🎉" : r === "lose" ? "😔" : "🤝";
-    resultText += `${n}: ${emoji} ${getResultText(r)}\n`;
-  }
-  updateGameResult(resultText);
-
-  // Lịch sử
-  addToHistory(choices, results);
-
-  // 🔊 Phát âm thanh CHỈ theo kết quả của CHÍNH BẠN (tên khớp với server)
-  const meName = getMyServerName();
-  const myResult = results[meName];
-  if (myResult === "win") play("win-sound");
-  else if (myResult === "lose") play("lose-sound");
-  else play("draw-sound");
-
-  // Cập nhật bảng điểm
-  if (currentRoom && scores) {
-    currentRoom.scores = scores;
-    updateScoreboard(currentRoom);
-  }
-
-  // UI sau khi kết thúc ván
-  showNewGameButton();
-  hideReadyButton();
-
-  isWaitingForOpponent = false;
-  currentChoice = null;
-  clearChoiceSelection();
-  isReady = false;
-  disableChoices();
-
-  updateGameStatus("Trận đấu kết thúc! Bấm 'Chơi lại' để bắt đầu vòng mới");
-  // 🔊 BẬT lại nhạc nền ở màn hình chờ sau trận
-  startBGMIfNeeded();
-}
-
-// Thêm helper chung
-function play(tagId) {
-  if (!sfxEnabled) return;
-  const el = document.getElementById(tagId);
-  if (!el) return;
-  try {
-    el.currentTime = 0;
-    el.play();
-  } catch {}
-}
-
-//Helper phát nhạc nền + toggle
-function startBGMIfNeeded() {
-  const bgm = document.getElementById("bgm");
-  if (!bgm || !bgmEnabled) return;
-  try {
-    bgm.currentTime = 0;
-    bgm.volume = 0.35;
-    bgm.play();
-  } catch {}
-}
-
-function stopBGM() {
-  const bgm = document.getElementById("bgm");
-  if (!bgm) return;
-  try {
-    bgm.pause();
-  } catch {}
-}
-
-function toggleBGM() {
-  bgmEnabled = !bgmEnabled;
-  const btn = document.getElementById("bgm-toggle");
-  if (bgmEnabled) {
-    startBGMIfNeeded();
-    btn.textContent = "🎵 Nhạc: Bật";
-  } else {
-    stopBGM();
-    btn.textContent = "🎵 Nhạc: Tắt";
-  }
-}
-
-function toggleSFX() {
-  sfxEnabled = !sfxEnabled;
-  const btn = document.getElementById("sfx-toggle");
-  btn.textContent = sfxEnabled ? "🔔 Hiệu ứng: Bật" : "🔕 Hiệu ứng: Tắt";
-}
-
-function sendChoice(choice) {
-  // --- BOT MODE ---
-  if (currentRoom && currentRoom.room_name === "Bạn vs Máy") {
-    // Chỉ cho chọn khi đang ở trạng thái 'playing'
-    if (!currentRoom || currentRoom.game_state !== "playing") {
-      showNotification("Bấm 'Chơi lại' để bắt đầu ván mới với Bot.", "info");
-      return;
-    }
-    // Chống spam click nhiều lần trong ván
-    if (hasChosenThisRound) return;
-    hasChosenThisRound = true;
-
-    // SFX click chọn
-    play("click-sound");
-
-    const me = effectivePlayerName();
-    currentChoice = choice;
-    selectChoice(choice);
-    disableChoices(); // khóa nút ngay khi đã chọn
-
-    // Bot chọn ngẫu nhiên
-    const botChoices = ["rock", "paper", "scissors"];
-    const botChoice = botChoices[Math.floor(Math.random() * 3)];
-
-    // Tính kết quả
-    const result = getResultAgainstBot(choice, botChoice);
-    const results = {
-      [me]: result,
-      Bot: result === "win" ? "lose" : result === "lose" ? "win" : "draw",
+    const { choices, results, scores } = data;
+    
+    console.log('Nhận game_result:', data);
+    console.log('Scores nhận được:', scores);
+    
+    // Hiển thị kết quả
+    const choiceNames = {
+        'rock': 'Búa 🪨',
+        'paper': 'Bao 📄', 
+        'scissors': 'Kéo ✂️'
     };
-    const choices = { [me]: choice, Bot: botChoice };
-
-    // Lịch sử + điểm tích lũy (scores màn hình)
+    
+    let resultText = "Kết quả:\n";
+    for (const [playerName, choice] of Object.entries(choices)) {
+        resultText += `${playerName}: ${choiceNames[choice]}\n`;
+    }
+    resultText += "\nKết quả:\n";
+    for (const [playerName, result] of Object.entries(results)) {
+        const resultEmoji = result === 'win' ? '🎉' : result === 'lose' ? '😔' : '🤝';
+        resultText += `${playerName}: ${resultEmoji} ${getResultText(result)}\n`;
+    }
+    
+    updateGameResult(resultText);
+    
+    // Thêm vào lịch sử
     addToHistory(choices, results);
-    if (!currentRoom.scores[me])
-      currentRoom.scores[me] = { wins: 0, losses: 0, draws: 0 };
-    if (!currentRoom.scores["Bot"])
-      currentRoom.scores["Bot"] = { wins: 0, losses: 0, draws: 0 };
-    if (result === "win") {
-      currentRoom.scores[me].wins++;
-      currentRoom.scores.Bot.losses++;
-    } else if (result === "lose") {
-      currentRoom.scores[me].losses++;
-      currentRoom.scores.Bot.wins++;
-    } else {
-      currentRoom.scores[me].draws++;
-      currentRoom.scores.Bot.draws++;
+    
+    // Cập nhật bảng điểm với điểm số mới
+    if (currentRoom && scores) {
+        console.log('Cập nhật scores cho currentRoom:', scores);
+        currentRoom.scores = scores;
+        updateScoreboard(currentRoom);
     }
-    updateScoreboard(currentRoom);
-
-    // Hiển thị kết quả một ván
-    const getChoiceText = (c) =>
-      c === "rock" ? "Búa ✊" : c === "paper" ? "Bao 🤚" : "Kéo ✌️";
-    updateGameResult(
-      `Bạn chọn ${getChoiceText(choice)} - Bot chọn ${getChoiceText(botChoice)}`
-    );
-
-    // Phát âm theo KẾT QUẢ của bạn
-    if (result === "win") play("win-sound");
-    else if (result === "lose") play("lose-sound");
-    else play("draw-sound");
-
-    // --- CẬP NHẬT SERIES (Bo3) ---
-    if (result === "win") botSeriesWins.me++;
-    else if (result === "lose") botSeriesWins.bot++;
-    // Hòa thì seriesWins không đổi
-    updateSeriesUIBot();
-
-    const target = Math.ceil(botSeriesBestOf / 2); // Bo3 -> 2, Bo5 -> 3
-    clearCountdownTimer();
-    currentRoom.game_state = "finished";
-
-    showNewGameButton(); // hiện nút Chơi lại
-
-    if (botSeriesWins.me >= target || botSeriesWins.bot >= target) {
-      // SERIES KẾT THÚC
-      botSeriesOver = true;
-      updateGameStatus(
-        botSeriesWins.me > botSeriesWins.bot
-          ? `Bạn thắng series Bo${botSeriesBestOf}! Bấm 'Chơi lại' để bắt đầu series mới.`
-          : `Bot thắng series Bo${botSeriesBestOf}! Bấm 'Chơi lại' để bắt đầu series mới.`
-      );
-      // Đổi nhãn nút cho dễ hiểu (tùy bạn)
-      const btn = document.getElementById("new-game-btn");
-      if (btn) btn.textContent = "🔄 Bắt đầu series mới";
-    } else {
-      // CÒN VÁN TIẾP THEO
-      botSeriesOver = false;
-      updateGameStatus(
-        `Ván tiếp theo trong series Bo${botSeriesBestOf}: bấm 'Chơi lại'.`
-      );
-      const btn = document.getElementById("new-game-btn");
-      if (btn) btn.textContent = "🔄 Chơi lại (vòng kế)";
-    }
-    return;
-  }
-
-  // --- PVP (giữ nguyên như bạn đang có) ---
-  if (isWaitingForOpponent) {
-    showNotification("Bạn đã chọn rồi, đang chờ người khác...", "info");
-    return;
-  }
-  play("click-sound");
-  currentChoice = choice;
-  isWaitingForOpponent = true;
-
-  selectChoice(choice);
-  hasChosenThisRound = true;
-  clearCountdownTimer();
-
-  ws.send(JSON.stringify({ type: "choice", choice }));
-  updateGameStatus("Đã chọn! Đang chờ người khác...");
+    
+    // Hiển thị nút chơi lại và ẩn nút sẵn sàng
+    showNewGameButton();
+    hideReadyButton();
+    
+    // Reset trạng thái và tắt các nút lựa chọn
+    isWaitingForOpponent = false;
+    currentChoice = null;
+    clearChoiceSelection();
+    isReady = false;
+    disableChoices(); // Tắt các nút lựa chọn cho đến khi cả 2 bấm chơi lại
+    
+    updateGameStatus("Trận đấu kết thúc! Bấm 'Chơi lại' để bắt đầu vòng mới");
 }
 
 // Cập nhật bảng điểm
@@ -900,11 +701,10 @@ function hideReadyButton() {
 
 // Hiển thị nút sẵn sàng
 function showReadyButton() {
-  const readyBtn = document.getElementById("ready-btn");
-  isReady = false;
-  readyBtn.style.display = "block";
-  readyBtn.textContent = "✅ Sẵn sàng";
-  readyBtn.classList.remove("ready");
+    const readyBtn = document.getElementById('ready-btn');
+    readyBtn.style.display = 'block';
+    readyBtn.textContent = '✅ Sẵn sàng';
+    readyBtn.classList.remove('ready');
 }
 
 // Thêm vào lịch sử
@@ -1013,107 +813,8 @@ document.addEventListener("DOMContentLoaded", () => {
       createRoom();
     }
   });
-  //
-  const usePw = document.getElementById("use-password");
-  const pwWrap = document.getElementById("password-wrap");
-  const pwInput = document.getElementById("room-password");
-  const eyeBtn = document.getElementById("pw-eye");
-  if (usePw && pwWrap) {
-    usePw.addEventListener("change", () => {
-      pwWrap.style.display = usePw.checked ? "block" : "none";
-      // reset kiểu input + biểu tượng khi tắt
-      if (!usePw.checked && pwInput && eyeBtn) {
-        pwInput.type = "password";
-        eyeBtn.textContent = "👁";
-        eyeBtn.setAttribute("aria-label", "Hiện mật khẩu");
-      }
-    });
-  }
-
-  // toggle con mắt
-  if (eyeBtn && pwInput) {
-    eyeBtn.addEventListener("click", () => {
-      const hidden = pwInput.type === "password";
-      pwInput.type = hidden ? "text" : "password";
-      eyeBtn.textContent = hidden ? "🙈" : "👁"; // đổi icon
-      eyeBtn.setAttribute(
-        "aria-label",
-        hidden ? "Ẩn mật khẩu" : "Hiện mật khẩu"
-      );
-      // giữ nguyên vị trí con trỏ
-      pwInput.focus();
-      pwInput.setSelectionRange(pwInput.value.length, pwInput.value.length);
-    });
-  }
-  document.addEventListener(
-    "click",
-    function onFirstInteraction() {
-      // lần click đầu tiên trên trang -> bắt đầu BGM (đáp ứng autoplay policy)
-      startBGMIfNeeded();
-      document.removeEventListener("click", onFirstInteraction);
-    },
-    { once: true }
-  );
-
-  // Phát click cho mọi button, trừ nút lựa chọn (vì sendChoice đã play click rồi)
-  document.addEventListener("click", (e) => {
-    const btn = e.target.closest("button");
-    if (!btn) return;
-    if (btn.classList.contains("choice-btn")) return; // tránh double
-    play("ui-click-sound");
-  });
-  // Cập nhật nhãn ban đầu
-  const bgmBtn = document.getElementById("bgm-toggle");
-  const sfxBtn = document.getElementById("sfx-toggle");
-  if (bgmBtn) bgmBtn.textContent = bgmEnabled ? "🎵 Nhạc: Bật" : "🎵 Nhạc: Tắt";
-  if (sfxBtn)
-    sfxBtn.textContent = sfxEnabled ? "🔔 Hiệu ứng: Bật" : "🔕 Hiệu ứng: Tắt";
 });
 
-// Bắt đầu chơi với máy (bot)
-function startVsBot() {
-  const me = effectivePlayerName();
-  isBotMode = true;
-
-  // Reset series mỗi khi vào Bot (nếu muốn giữ điểm qua nhiều series, bỏ 3 dòng dưới)
-  botSeriesBestOf = 3; // có thể đổi 5 sau
-  botSeriesWins = { me: 0, bot: 0 };
-  botSeriesOver = false;
-
-  currentRoom = {
-    room_name: "Bạn vs Máy",
-    players: [
-      { name: me, ready: false, player_id: playerId },
-      { name: "Bot", ready: false, player_id: -1 },
-    ],
-    game_state: "waiting",
-    scores: {
-      [me]: currentRoom?.scores?.[me] ?? { wins: 0, losses: 0, draws: 0 },
-      Bot: currentRoom?.scores?.Bot ?? { wins: 0, losses: 0, draws: 0 },
-    },
-  };
-
-  showGameRoom();
-  hideNewGameButton(); // tránh dính trạng thái cũ
-  showReadyButton(); // có Sẵn sàng giống PvP
-  disableChoices();
-  updateGameStatus("Bấm 'Sẵn sàng' để bắt đầu ván với Bot.");
-  updateSeriesUIBot(); // hiện Bo3: 0—0
-  stopBGM(); // nếu bạn đang để vào trận tắt nhạc
-}
-
-// Hàm xử lý kết quả khi chơi với bot
-function getResultAgainstBot(player, bot) {
-  if (player === bot) return "draw";
-  if (
-    (player === "rock" && bot === "scissors") ||
-    (player === "paper" && bot === "rock") ||
-    (player === "scissors" && bot === "paper")
-  ) {
-    return "win";
-  }
-  return "lose";
-}
 //hàm gửi chat
 function sendChat() {
   const input = document.getElementById("chat-input");
@@ -1182,127 +883,4 @@ function clearCountdownTimer() {
     countdownInterval = null;
   }
   document.getElementById("countdown-timer").style.display = "none";
-}
-function effectivePlayerName() {
-  return (playerName && playerName.trim()) || `Người chơi ${playerId}`;
-}
-
-//Thêm hàm quickPlay
-function quickPlay() {
-  const rooms = Array.isArray(latestRooms) ? latestRooms : [];
-  const candidates = rooms
-    .filter((r) => !r.has_password) // bỏ qua phòng có mật khẩu
-    .filter((r) => Number(r.current_players) < 2)
-    .sort((a, b) => {
-      const rank = (s) => (s === "waiting" ? 0 : s === "playing" ? 1 : 2);
-      return rank(a.game_state) - rank(b.game_state);
-    });
-
-  if (candidates.length > 0) {
-    joinRoom(candidates[0].room_id);
-    return;
-  }
-
-  // Không có phòng public phù hợp -> tạo nhanh (không mật khẩu)
-  document.getElementById("room-name").value = `Phòng ${Date.now()}`;
-  // đảm bảo không gửi password
-  if (document.getElementById("use-password")) {
-    document.getElementById("use-password").checked = false;
-    const pwWrap = document.getElementById("password-wrap");
-    if (pwWrap) pwWrap.style.display = "none";
-  }
-  createRoom();
-}
-
-//Hàm ping
-function updatePingUI(rtt) {
-  const el = document.getElementById("ping-value");
-  if (!el) return;
-  el.textContent = rtt > 0 ? rtt : "--";
-
-  el.classList.remove("ping-good", "ping-ok", "ping-bad");
-  if (rtt <= 0) return;
-  if (rtt < 60) el.classList.add("ping-good");
-  else if (rtt < 150) el.classList.add("ping-ok");
-  else el.classList.add("ping-bad");
-}
-function startPing() {
-  if (pingTimer) return;
-  const tick = () => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    lastPingTs = Date.now();
-    ws.send(JSON.stringify({ type: "ping", t: lastPingTs }));
-  };
-  tick(); // gửi ngay 1 cái
-  pingTimer = setInterval(tick, 5000);
-}
-
-function stopPing() {
-  if (pingTimer) {
-    clearInterval(pingTimer);
-    pingTimer = null;
-  }
-  updatePingUI(0);
-}
-//Cập nhật chức năng bot
-function updateSeriesUIBot() {
-  const el = document.getElementById("series-status");
-  if (!el) return;
-  const me = effectivePlayerName();
-  el.style.display = "block";
-  el.textContent = `Bo${botSeriesBestOf}: ${me} ${botSeriesWins.me} — ${botSeriesWins.bot} Bot`;
-}
-
-// ==== Bo3 UI cho PvP (bản chắc kèo) ====
-function updateSeriesUIPvp(series) {
-  // Bỏ qua nếu đang ở Bot mode
-  if (typeof isBotMode !== "undefined" && isBotMode) return;
-
-  const box = document.getElementById("series-status");
-  if (!box) return;
-
-  // Phòng hờ: chưa có room/players -> ẩn
-  if (
-    !currentRoom ||
-    !Array.isArray(currentRoom.players) ||
-    currentRoom.players.length < 1
-  ) {
-    box.style.display = "none";
-    return;
-  }
-
-  const bo = (series && series.best_of) || 3;
-  const wins = (series && series.wins) || {};
-
-  // Map id -> name để tra thẳng theo id trong 'wins'
-  const byId = {};
-  for (const p of currentRoom.players) {
-    if (p && typeof p.player_id !== "undefined") {
-      byId[String(p.player_id)] =
-        p.name || p.player_name || `Player_${p.player_id}`;
-    }
-  }
-
-  // Xác định "mình" & "đối thủ" theo playerId thật
-  const meId = String(playerId);
-  const meName = byId[meId] || `Player_${playerId}`;
-
-  // Tìm id đối thủ từ danh sách players (khác playerId của mình)
-  let oppId = null;
-  for (const p of currentRoom.players) {
-    if (p && String(p.player_id) !== meId) {
-      oppId = String(p.player_id);
-      break;
-    }
-  }
-  const oppName = (oppId && byId[oppId]) || "Đối thủ";
-
-  // Lấy điểm theo id (chịu cả trường hợp key là "1" hoặc 1)
-  const getW = (id) => wins[String(id)] ?? wins[id] ?? 0;
-  const wMe = getW(meId);
-  const wOpp = oppId ? getW(oppId) : 0;
-
-  // Nếu thiếu id đối thủ (hi hữu) thì vẫn hiển thị mình 0—0 để không “mất dòng”
-  box.style.display = "block";
-  box.textContent = `Bo${bo}: ${meName} ${wMe} — ${wOpp} ${oppName}`;
 }

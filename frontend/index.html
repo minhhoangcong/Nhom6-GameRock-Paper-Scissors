@@ -146,66 +146,67 @@
           <button class="leave-btn" onclick="leaveRoom()">🚪 Rời phòng</button>
         </div>
 
-        <!-- ========= GAME ROOM LAYOUT (2 COLUMNS) ========= -->
-        <section class="room-shell">
-          <div class="room-grid">
-            <!-- LEFT: status + series + choices + history -->
-            <div class="room-left">
-              <div class="section-card sticky-status">
-                <div id="game-status" class="game-status-text">
-                  Chờ người chơi tham gia...
-                </div>
-                <!-- Ô Bo3: BẮT BUỘC có để hiển thị series PvP -->
-                <div
-                  id="series-status"
-                  style="margin-top: 6px; font-weight: 600; display: none"
-                ></div>
+        <div class="room-info">
+          <div class="players-list">
+            <h3>👥 Người chơi trong phòng</h3>
+            <div id="players-list"></div>
+          </div>
+          <div class="scoreboard">
+            <h3>🏆 Bảng điểm</h3>
+            <div id="scoreboard"></div>
+          </div>
+        </div>
 
-                <!-- Đồng hồ 10s (giữ đúng id) -->
-                <div
-                  id="countdown-timer"
-                  class="countdown-timer"
-                  style="
-                    text-align: center;
-                    color: #dc3545;
-                    font-weight: bold;
-                    font-size: 18px;
-                    margin: 6px 0 10px;
-                    display: none;
-                  "
-                >
-                  Thời gian còn lại: <span id="timer-value">10</span> giây
-                </div>
+        <div class="game-section">
+          <div class="game-status">
+            <p id="game-status">Chờ người chơi tham gia...</p>
+            <p id="game-result">Chọn lựa của bạn:</p>
+          </div>
+          <div id="countdown-timer" class="countdown-timer" style="text-align:center; color:#dc3545; font-weight:bold; font-size:18px; margin-bottom:10px; display:none;">
+  Thời gian còn lại: <span id="timer-value">10</span> giây
+</div>
 
-                <div id="game-result" class="game-result-text"></div>
+          <div
+            id="countdown-timer"
+            class="countdown-timer"
+            style="
+              text-align: center;
+              color: #dc3545;
+              font-weight: bold;
+              font-size: 18px;
+              margin-bottom: 10px;
+              display: none;
+            "
+          >
+            Thời gian còn lại: <span id="timer-value">10</span> giây
+          </div>
 
-                <!-- 3 nút chọn: GIỮ NGUYÊN id & onclick -->
-                <div class="choices">
-                  <button
-                    class="choice-btn"
-                    onclick="sendChoice('rock')"
-                    id="rock-btn"
-                  >
-                    <div class="choice-icon">✊️</div>
-                    <div class="choice-text">Búa</div>
-                  </button>
-                  <button
-                    class="choice-btn"
-                    onclick="sendChoice('paper')"
-                    id="paper-btn"
-                  >
-                    <div class="choice-icon">🤚</div>
-                    <div class="choice-text">Bao</div>
-                  </button>
-                  <button
-                    class="choice-btn"
-                    onclick="sendChoice('scissors')"
-                    id="scissors-btn"
-                  >
-                    <div class="choice-icon">✌</div>
-                    <div class="choice-text">Kéo</div>
-                  </button>
-                </div>
+          <div class="choices">
+            <button
+              class="choice-btn"
+              onclick="sendChoice('rock')"
+              id="rock-btn"
+            >
+              <div class="choice-icon">🪨</div>
+              <div class="choice-text">Búa</div>
+            </button>
+            <button
+              class="choice-btn"
+              onclick="sendChoice('paper')"
+              id="paper-btn"
+            >
+              <div class="choice-icon">📄</div>
+              <div class="choice-text">Bao</div>
+            </button>
+            <button
+              class="choice-btn"
+              onclick="sendChoice('scissors')"
+              id="scissors-btn"
+            >
+              <div class="choice-icon">✂️</div>
+              <div class="choice-text">Kéo</div>
+            </button>
+          </div>
 
                 <div class="ready-section" style="margin-top: 10px">
                   <button
