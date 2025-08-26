@@ -985,3 +985,64 @@ h1 {
 .audio-controls button:hover {
   background: #545b62;
 }
+/*cập nhật lại giao diện*/
+/* ====== LAYOUT 2 CỘT CHO PHÒNG CHƠI ====== */
+.room-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px;
+}
+.room-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.section-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+  padding: 16px;
+}
+.sticky-status {
+  position: sticky;
+  top: 12px;
+  z-index: 2;
+}
+
+.scroll-box {
+  max-height: 38vh;
+  overflow: auto;
+  padding-right: 6px;
+}
+.room-left,
+.room-right {
+  max-height: calc(100vh - 160px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.game-status-text {
+  font-weight: 600;
+  color: #444;
+}
+.game-result-text {
+  margin-top: 4px;
+  color: #333;
+}
+
+/* Mobile: 1 cột */
+@media (max-width: 992px) {
+  .room-grid {
+    grid-template-columns: 1fr;
+  }
+  .room-left,
+  .room-right {
+    max-height: none;
+    overflow: visible;
+  }
+  .scroll-box {
+    max-height: 240px;
+  }
+}
