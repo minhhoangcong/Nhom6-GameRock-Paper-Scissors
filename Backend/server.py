@@ -17,7 +17,11 @@ class GameRoom:
         self.scores: Dict[websockets.WebSocketServerProtocol, dict] = {}
         self.game_state = 'waiting'  # waiting, playing, finished
         self.ready_players: Set[websockets.WebSocketServerProtocol] = set()
-        
+        self.series_best_of = 3          # Bo3
+        self.series_wins = {}            # map: websocket -> số ván thắng trong series hiện tại
+        self.series_over = False         # đã kết thúc series hay chưa
+        self.password_hash = password_hash
+
     def add_player(self, player: websockets.WebSocketServerProtocol, player_name: str):
         if len(self.players) < self.max_players:
             self.players.append(player)
