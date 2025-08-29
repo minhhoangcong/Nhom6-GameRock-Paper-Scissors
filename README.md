@@ -1,10 +1,18 @@
-# 🪨 📄 ✂️ Trò Chơi Kéo Búa Bao - Multiplayer Rooms
+# ✊️ 🤚 ✌ Trò Chơi Kéo Búa Bao - Multiplayer Rooms
+
+# ---
+
+**Dự án giữa kỳ môn Lập trình mạng**  
+**Nhóm 6**  
+**Đề tài: Game Rock-Paper-Scissors (Kéo Búa Bao) - Multiplayer Rooms**  
+**Thời gian thực hiện: 19/07/2025 - 05/09/2025**
+
+# ---
 
 Một trò chơi kéo búa bao đa người chơi với hệ thống phòng riêng, cho phép tối đa 2 người chơi trong một phòng.
 
 ## ✨ Tính năng mới
 
-- 🏠 **Hệ thống phòng riêng**: Tạo và tham gia phòng với tên tùy chỉnh
 - 👥 **Tối đa 2 người chơi**: Hỗ trợ từ 2 người trong một phòng
 - 🎯 **Quản lý người chơi**: Đặt tên, trạng thái sẵn sàng
 - 📊 **Tính điểm đa người**: So sánh lựa chọn của tất cả người chơi
@@ -29,7 +37,7 @@ pip install websockets
 ### Bước 2: Khởi động server
 
 ```bash
-cd backend
+cd Backend
 python server.py
 ```
 
@@ -50,6 +58,8 @@ Sau đó truy cập `http://localhost:8000`
 
 ## 🎯 Cách chơi
 
+│ ├── scirpt.js # Logic client cho hệ thống phòng
+
 ### 1. **Đặt tên người chơi**
 
 - Nhập tên của bạn và nhấn "Cập nhật"
@@ -67,24 +77,24 @@ Sau đó truy cập `http://localhost:8000`
 
 ### 4. **Chơi game**
 
-- Chọn Búa 🪨, Bao 📄, hoặc Kéo ✂️
+- Chọn Búa ✊️, Bao 🤚, hoặc Kéo ✌
 - Xem kết quả và điểm số của tất cả người chơi
 - Nhấn "Chơi lại" để tiếp tục
 
 ## 📋 Luật chơi đa người
 
-- **Búa 🪨** thắng **Kéo ✂️**
-- **Kéo ✂️** thắng **Bao 📄**
-- **Bao 📄** thắng **Búa 🪨**
+- **Búa ✊️** thắng **Kéo ✌**
+- **Kéo ✌** thắng **Bao 🤚**
+- **Bao 🤚** thắng **Búa ✊️**
 - Nếu cùng lựa chọn thì **Hòa**
 - **Nhiều người cùng lựa chọn**: Tất cả người chọn lựa chọn thắng sẽ thắng
 
 ### Ví dụ với 4 người chơi:
 
-- Người A: Búa 🪨
-- Người B: Kéo ✂️
-- Người C: Búa 🪨
-- Người D: Bao 📄
+- Người A: Búa ✊️
+- Người B: Kéo ✌
+- Người C: Búa ✊️
+- Người D: Bao 🤚
 
 **Kết quả**: Người A và C thắng (Búa thắng Kéo), Người B thua, Người D thua (Bao thua Búa)
 
@@ -185,7 +195,7 @@ Nếu bạn muốn đóng góp vào dự án, hãy:
 3. Commit thay đổi
 4. Tạo Pull Request
 
-## 📄 License
+## 🤚 License
 
 Dự án này được phát hành dưới MIT License.
 
