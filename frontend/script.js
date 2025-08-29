@@ -389,7 +389,12 @@ function showGameRoom() {
 // Cập nhật thông tin phòng
 function updateRoomInfo(room) {
   // Chỉ hiển thị series nếu đang có series thực sự
-  if (!isBotMode && lastPvpSeries && lastPvpSeries.wins && Object.keys(lastPvpSeries.wins).length > 0) {
+  if (
+    !isBotMode &&
+    lastPvpSeries &&
+    lastPvpSeries.wins &&
+    Object.keys(lastPvpSeries.wins).length > 0
+  ) {
     updateSeriesUIPvp(lastPvpSeries);
   } else {
     // Ẩn nút Chơi lại nếu chưa có series
