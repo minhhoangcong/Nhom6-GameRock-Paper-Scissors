@@ -72,6 +72,9 @@ function handleServerMessage(data) {
       lastPvpSeries = null; // Reset series khi tạo phòng mới
       showGameRoom();
       showReadyButton();
+      // Ẩn nút Chơi lại khi vừa tạo phòng
+      const btn = document.getElementById("new-game-btn");
+      if (btn) btn.style.display = "none";
       showNotification("Đã tạo phòng thành công!", "success");
       break;
 
@@ -385,7 +388,14 @@ function showGameRoom() {
 
 // Cập nhật thông tin phòng
 function updateRoomInfo(room) {
-  if (!isBotMode && lastPvpSeries) updateSeriesUIPvp(lastPvpSeries);
+  // Chỉ hiển thị series nếu đang có series thực sự
+  if (!isBotMode && lastPvpSeries && lastPvpSeries.wins && Object.keys(lastPvpSeries.wins).length > 0) {
+    updateSeriesUIPvp(lastPvpSeries);
+  } else {
+    // Ẩn nút Chơi lại nếu chưa có series
+    const btn = document.getElementById("new-game-btn");
+    if (btn) btn.style.display = "none";
+  }
   if (!room) return;
 
   currentRoom = room;
