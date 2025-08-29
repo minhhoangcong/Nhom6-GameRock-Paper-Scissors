@@ -69,6 +69,7 @@ function handleServerMessage(data) {
 
     case "room_created":
       currentRoom = data.room;
+      lastPvpSeries = null; // Reset series khi tạo phòng mới
       showGameRoom();
       showReadyButton();
       showNotification("Đã tạo phòng thành công!", "success");

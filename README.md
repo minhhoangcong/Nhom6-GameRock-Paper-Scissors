@@ -47,23 +47,24 @@ Server sẽ chạy tại `ws://localhost:8082`
 
 ### Bước 3: Mở trò chơi
 
-Mở file `frontend/index.html` trong trình duyệt web.
+Cách 1: Mở file `frontend/index.html` trực tiếp trong trình duyệt web.
 
-Hoặc sử dụng một web server đơn giản:
+Cách 2: Chạy web server cho frontend:
 
+```bash
+cd frontend
+python -m http.server 8000
 ```
-GK-nhóm1-kéo/
-├── backend/
-│   └── server.py          # Server WebSocket với hệ thống phòng
-├── frontend/
-│   ├── assets/
-│   │   └── sounds/       # Thư mục chứa các tệp âm thanh (click.mp3, win.mp3, lose.mp3, draw.mp3)
-│   ├── index.html        # Giao diện chính với 3 màn hình
-│   ├── script.js         # Logic client cho hệ thống phòng
-│   └── style.css         # CSS styling responsive
-├── requirements.txt      # Các thư viện cần cài đặt
-├── start_server.bat      # Script khởi động Windows
-└── README.md             # Hướng dẫn này
+
+Sau đó truy cập `http://localhost:8000` trên trình duyệt.
+│ │ └── sounds/ # Thư mục chứa các tệp âm thanh (click.mp3, win.mp3, lose.mp3, draw.mp3)
+│ ├── index.html # Giao diện chính với 3 màn hình
+│ ├── script.js # Logic client cho hệ thống phòng
+│ └── style.css # CSS styling responsive
+├── requirements.txt # Các thư viện cần cài đặt
+├── start_server.bat # Script khởi động Windows
+└── README.md # Hướng dẫn này
+
 ```
 
 ### 2. **Tạo hoặc tham gia phòng**
@@ -103,18 +104,20 @@ GK-nhóm1-kéo/
 ## 🏗️ Cấu trúc dự án
 
 ```
+
 GK-nhóm1-kéo/
 ├── backend/
-│   └── server.py          # Server WebSocket với hệ thống phòng
+│ └── server.py # Server WebSocket với hệ thống phòng
 ├── frontend/
-│   ├── assets/
-│   │   └── sounds/       # Thư mục chứa các tệp âm thanh (click.mp3, win.mp3, lose.mp3, draw.mp3)
-│   ├── index.html        # Giao diện chính với 3 màn hình
-│   ├── script.js         # Logic client cho hệ thống phòng
-│   └── style.css         # CSS styling responsive
-├── requirements.txt      # Các thư viện cần cài đặt
-├── start_server.bat      # Script khởi động Windows
-└── README.md             # Hướng dẫn này
+│ ├── assets/
+│ │ └── sounds/ # Thư mục chứa các tệp âm thanh (click.mp3, win.mp3, lose.mp3, draw.mp3)
+│ ├── index.html # Giao diện chính với 3 màn hình
+│ ├── script.js # Logic client cho hệ thống phòng
+│ └── style.css # CSS styling responsive
+├── requirements.txt # Các thư viện cần cài đặt
+├── start_server.bat # Script khởi động Windows
+└── README.md # Hướng dẫn này
+
 ```
 
 ## 🔧 Công nghệ sử dụng
@@ -204,3 +207,4 @@ Dự án này được phát hành dưới MIT License.
 ---
 
 **Chúc bạn chơi vui vẻ với bạn bè! 🎉**
+```
