@@ -85,6 +85,43 @@
             maxlength="30"
           />
         </div>
+        <!-- HÀNG: label bên trái, công tắc bên phải -->
+        <div class="form-row password-row">
+          <label for="use-password" class="form-label"
+            >Đặt mật khẩu cho phòng</label
+          >
+
+          <!-- Toggle đẹp, vẫn là checkbox với id cũ để JS không đổi -->
+          <label class="switch">
+            <input type="checkbox" id="use-password" />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Ô nhập mật khẩu (ẩn khi chưa bật) -->
+        <div class="form-group" id="password-wrap" style="display: none">
+          <label for="room-password" class="form-label">Mật khẩu:</label>
+
+          <!-- ô nhập kèm nút con mắt -->
+          <div class="input-with-eye">
+            <input
+              type="password"
+              id="room-password"
+              placeholder="Nhập mật khẩu..."
+              maxlength="30"
+              autocomplete="new-password"
+            />
+            <button
+              type="button"
+              id="pw-eye"
+              class="eye-btn"
+              aria-label="Hiện mật khẩu"
+            >
+              👁
+            </button>
+          </div>
+        </div>
+
         <div class="form-group">
           <label for="max-players">Số người chơi:</label>
           <select id="max-players" disabled>
@@ -149,7 +186,7 @@
                     onclick="sendChoice('rock')"
                     id="rock-btn"
                   >
-                    <div class="choice-icon">🪨</div>
+                    <div class="choice-icon">✊️</div>
                     <div class="choice-text">Búa</div>
                   </button>
                   <button
@@ -157,7 +194,7 @@
                     onclick="sendChoice('paper')"
                     id="paper-btn"
                   >
-                    <div class="choice-icon">📄</div>
+                    <div class="choice-icon">🤚</div>
                     <div class="choice-text">Bao</div>
                   </button>
                   <button
@@ -165,7 +202,7 @@
                     onclick="sendChoice('scissors')"
                     id="scissors-btn"
                   >
-                    <div class="choice-icon">✂️</div>
+                    <div class="choice-icon">✌</div>
                     <div class="choice-text">Kéo</div>
                   </button>
                 </div>
