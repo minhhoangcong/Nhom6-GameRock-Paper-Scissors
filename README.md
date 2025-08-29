@@ -30,14 +30,16 @@ Một trò chơi kéo búa bao đa người chơi với hệ thống phòng riê
 
 ### Bước 1: Cài đặt dependencies
 
+Trước khi chạy hệ thống lần đầu, hãy cài các thư viện Python cần thiết:
+
 ```bash
-pip install websockets
+pip install -r requirements.txt
 ```
 
 ### Bước 2: Khởi động server
 
 ```bash
-cd Backend
+cd backend
 python server.py
 ```
 
@@ -49,20 +51,20 @@ Mở file `frontend/index.html` trong trình duyệt web.
 
 Hoặc sử dụng một web server đơn giản:
 
-```bash
-cd frontend
-python -m http.server 8000
 ```
-
-Sau đó truy cập `http://localhost:8000`
-
-## 🎯 Cách chơi
-
-│ ├── scirpt.js # Logic client cho hệ thống phòng
-
-### 1. **Đặt tên người chơi**
-
-- Nhập tên của bạn và nhấn "Cập nhật"
+GK-nhóm1-kéo/
+├── backend/
+│   └── server.py          # Server WebSocket với hệ thống phòng
+├── frontend/
+│   ├── assets/
+│   │   └── sounds/       # Thư mục chứa các tệp âm thanh (click.mp3, win.mp3, lose.mp3, draw.mp3)
+│   ├── index.html        # Giao diện chính với 3 màn hình
+│   ├── script.js         # Logic client cho hệ thống phòng
+│   └── style.css         # CSS styling responsive
+├── requirements.txt      # Các thư viện cần cài đặt
+├── start_server.bat      # Script khởi động Windows
+└── README.md             # Hướng dẫn này
+```
 
 ### 2. **Tạo hoặc tham gia phòng**
 

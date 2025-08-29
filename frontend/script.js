@@ -7,7 +7,7 @@ let isWaitingForOpponent = false;
 let currentChoice = null;
 let isReady = false;
 let isBotMode = false;
-let botSeriesBestOf = 3; // Bo3
+let botSeriesBestOf = 3;
 let botSeriesWins = { me: 0, bot: 0 };
 let botSeriesOver = false;
 let countdownInterval = null;
@@ -16,9 +16,9 @@ let hasChosenThisRound = false;
 let latestRooms = [];
 let pingTimer = null;
 let lastPingTs = 0;
-let bgmEnabled = false; // nhạc nền mặc định tắt khi vào game
-let sfxEnabled = true; // cho phép hiệu ứng (click, win/lose/draw)
-let lastPvpSeries = null; // nhớ series PvP mới nhất để render lại khi cần
+let bgmEnabled = false;
+let sfxEnabled = true;
+let lastPvpSeries = null;
 
 // Khởi tạo kết nối WebSocket
 function initWebSocket() {
@@ -70,7 +70,7 @@ function handleServerMessage(data) {
     case "room_created":
       currentRoom = data.room;
       showGameRoom();
-      showReadyButton(); // Hiển thị nút sẵn sàng khi tạo phòng
+      showReadyButton();
       showNotification("Đã tạo phòng thành công!", "success");
       break;
 
@@ -78,8 +78,8 @@ function handleServerMessage(data) {
       console.log("Nhận thông báo player_joined:", data);
       currentRoom = data.room;
       updateRoomInfo(data.room);
-      showGameRoom(); // Đảm bảo chuyển sang màn hình phòng
-      showReadyButton(); // Hiển thị nút sẵn sàng khi có người tham gia
+      showGameRoom();
+      showReadyButton();
       showNotification(`${data.player_name} đã tham gia phòng`, "info");
       break;
 
@@ -101,7 +101,7 @@ function handleServerMessage(data) {
       updateRoomInfo(room);
       clearChoiceSelection();
       hideNewGameButton();
-      hideReadyButton(); // vào ván thì ẩn Ready
+      hideReadyButton();
       enableChoices();
       isWaitingForOpponent = false;
       updateGameStatus("Trò chơi bắt đầu! Hãy chọn kéo/búa/bao.");
@@ -110,16 +110,15 @@ function handleServerMessage(data) {
         stopBGM && stopBGM();
       } catch {}
 
-      // 🕒 Đếm ngược 10s
+      // Đếm ngược 10s
       startCountdownTimer(10);
 
-      // 🔥 Bo3 PvP: nếu server gửi series thì lưu + hiển thị
+      // Bo3 PvP: nếu server gửi series thì lưu + hiển thị
       if (!isBotMode && series) {
         lastPvpSeries = series;
         updateSeriesUIPvp(series);
       } else if (!isBotMode && lastPvpSeries) {
-        // phòng hờ: nếu vì lý do gì game_start chưa kèm series,
-        // ta vẫn hiển thị lại series gần nhất để không "mất" dòng Bo3
+        // Nếu game_start chưa kèm series, hiển thị lại series gần nhất
         updateSeriesUIPvp(lastPvpSeries);
       }
 
@@ -132,10 +131,10 @@ function handleServerMessage(data) {
       break;
 
     case "game_result": {
-      // Dừng đồng hồ + hiển thị kết quả, điểm... (hàm cũ của bạn)
+      // Dừng đồng hồ + hiển thị kết quả, điểm
       handleGameResult(data);
 
-      // 🔥 Cập nhật Bo3 PvP chắc chắn theo payload từ server
+      // Cập nhật Bo3 PvP chắc chắn theo payload từ server
       if (!isBotMode && data.series) {
         lastPvpSeries = data.series;
         updateSeriesUIPvp(data.series);
@@ -258,7 +257,7 @@ function createRoom() {
       type: "create_room",
       room_name: roomName,
       max_players: 2,
-      password: password || undefined, // gửi undefined nếu để trống
+      password: password || undefined,
     })
   );
 }
@@ -269,7 +268,7 @@ function joinRoomWithPassword(roomId, hasPassword) {
     return;
   }
   const pwd = prompt("Phòng này có mật khẩu. Nhập mật khẩu để tham gia:");
-  if (pwd === null) return; // bấm Cancel
+  if (pwd === null) return;
   ws.send(
     JSON.stringify({ type: "join_room", room_id: roomId, password: pwd })
   );
@@ -299,9 +298,9 @@ function leaveRoom() {
   currentRoom = null;
   isBotMode = false;
   showMainScreen();
-  startBGMIfNeeded(); // 🔊 Về menu thì bật lại nhạc (nếu đang Bật)
+  startBGMIfNeeded();
   showNotification("Đã rời phòng", "info");
-  refreshRooms(); // Làm mới danh sách phòng
+  refreshRooms();
 }
 
 // Đặt tên người chơi
@@ -341,7 +340,7 @@ function toggleReady() {
 
       hideReadyButton();
       enableChoices();
-      startCountdownTimer(10); // nếu bạn muốn đếm ngược như PvP
+      startCountdownTimer(10);
       updateGameStatus("Trò chơi bắt đầu! Hãy chọn Kéo/Búa/Bao.");
       return;
     }
