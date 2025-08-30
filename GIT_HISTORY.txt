@@ -1,3 +1,4 @@
+2d936a1 | Hoàng Công Minh | 2025-08-30 | Thêm ảnh demo, video demo và file GIT_HISTORY.txt
 96fe940 | Hoàng Công Minh | 2025-08-29 | Hoàn thiện dự án cuối cùng
 9373514 | Hoàng Công Minh | 2025-08-29 | Hoàn thiện dự án
 97c168c | Hoàng Công Minh | 2025-08-29 | Hoàn thiện dự án
